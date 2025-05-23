@@ -183,6 +183,32 @@ class ClusterInfo:
         gpu_counts = self.get_gpu_generation_and_count()
         return gpu_type.upper() in gpu_counts
 
+    def get_max_job_lifetime(self) -> str:
+        """Get the maximum job lifetime specified in the Slurm configuration.
+
+        Returns:
+            str: The maximum job lifetime in the format "days-hours:minutes:seconds".
+
+        Raises:
+            RuntimeError: If unable to retrieve the maximum job lifetime information.
+        """
+        try:
+            result = subprocess.run(
+                ["scontrol", "show", "config"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=True,
+            )
+
+            for line in result.stdout.split("\n"):
+                if "MaxJobTime" in line:
+                    return line.split("=")[1].strip()
+
+            raise RuntimeError("Could not find MaxJobTime in scontrol output")
+        except subprocess.SubprocessError as e:
+            raise RuntimeError(f"Failed to get maximum job lifetime: {str(e)}")
+
 
 class AWSClusterInfo:
     def is_aws_cluster(self) -> bool:

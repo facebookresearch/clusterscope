@@ -32,6 +32,30 @@ class TestClusterInfo(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             self.cluster_info.get_cluster_name()
 
+    @patch("subprocess.run")
+    def test_get_max_job_lifetime(self, mock_run):
+        # Mock successful max job lifetime retrieval
+        mock_run.return_value = MagicMock(
+            stdout="MaxJobTime=7-00:00:00\nOther=value", returncode=0
+        )
+        self.assertEqual(self.cluster_info.get_max_job_lifetime(), "1-00:00:00")
+
+    @patch("subprocess.run")
+    def test_get_max_job_lifetime_error(self, mock_run):
+        # Mock failed command
+        mock_run.side_effect = subprocess.SubprocessError()
+        with self.assertRaises(RuntimeError):
+            self.cluster_info.get_max_job_lifetime()
+
+    @patch("subprocess.run")
+    def test_get_max_job_lifetime_not_found(self, mock_run):
+        # Mock successful command but MaxJobTime not in output
+        mock_run.return_value = MagicMock(
+            stdout="SomeOtherSetting=value\nAnotherSetting=value", returncode=0
+        )
+        with self.assertRaises(RuntimeError):
+            self.cluster_info.get_max_job_lifetime()
+
     @patch("clusterscope.cluster_info.ClusterInfo.get_gpu_generation_and_count")
     def test_has_gpu_type_true(self, mock_get_gpu_generation_and_count):
         # Set up the mock to return a dictionary with the GPU type we're looking for
