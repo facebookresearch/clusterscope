@@ -1,3 +1,4 @@
+import shutil
 import subprocess
 import unittest
 from unittest.mock import MagicMock, patch
@@ -5,6 +6,7 @@ from unittest.mock import MagicMock, patch
 from clusterscope.cluster_info import AWSClusterInfo, ClusterInfo
 
 
+@unittest.skipIf(shutil.which("sinfo") is None, "Machine does not have slurm")
 class TestClusterInfo(unittest.TestCase):
     def setUp(self):
         self.cluster_info = ClusterInfo()
