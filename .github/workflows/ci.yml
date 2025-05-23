@@ -17,10 +17,11 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
-        run: make install
-
+        run: make install-dependencies
       - name: print clusterscope version
-        run: python -c "import clusterscope; clusterscope.__version__"
+        run: |
+          make activate
+          python -c "import clusterscope; clusterscope.__version__"
 
   format:
     runs-on: ubuntu-latest
@@ -33,10 +34,9 @@ jobs:
           python-version: "3.10"
       - name: Install dev requirements
         run: make install-dev-requirements
-      - name: Install clusterscope
-        run: make install
       - name: Run ufmt
         run: |
+          make activate
           ufmt clusterscope tests
 
   lint:
@@ -50,10 +50,9 @@ jobs:
           python-version: "3.10"
       - name: Install dev requirements
         run: make install-dev-requirements
-      - name: Install clusterscope
-        run: make install
       - name: Run flake8
         run: |
+          make activate
           flake8 clusterscope tests
 
   typecheck:
@@ -71,6 +70,7 @@ jobs:
         run: make install
       - name: Run mypy
         run: |
+          make activate
           mypy clusterscope tests
 
   tests:
@@ -87,10 +87,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dev requirements
         run: make install-requirements
-      - name: Install clusterscope
-        run: make install
       - name: Run tests
         run: |
+          make activate
           python -m unittest discover -s tests
 
   build-and-publish:
