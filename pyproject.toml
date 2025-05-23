@@ -32,7 +32,7 @@ dev = [
   "ufmt",
   "usort",
   "mypy",
-  "pre-commit>=4.2.0",
+  "pre-commit>=3.8.0",
   "build",
 ]
 
