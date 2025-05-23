@@ -57,9 +57,7 @@ jobs:
           make install
 
       - name: Run ufmt
-        run: |
-          make activate
-          ufmt clusterscope tests
+        run: ufmt check clusterscope tests
 
   # lint:
   #   runs-on: ubuntu-latest
