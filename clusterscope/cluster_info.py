@@ -1,5 +1,6 @@
 import logging
 import re
+import shutil
 import subprocess
 from functools import lru_cache
 from typing import Dict, Set
@@ -14,7 +15,8 @@ class ClusterInfo:
 
     def __init__(self):
         """Initialize the Cluster instance."""
-        self._verify_slurm_available()
+        if shutil.which("sinfo") is not None:
+            self._verify_slurm_available()
 
     def _verify_slurm_available(self) -> None:
         """Verify that Slurm commands are available on the system."""
