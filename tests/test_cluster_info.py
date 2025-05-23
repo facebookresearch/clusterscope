@@ -2,7 +2,7 @@ import subprocess
 import unittest
 from unittest.mock import MagicMock, patch
 
-from cluster_info import ClusterInfo
+from clusterscope.cluster_info import ClusterInfo
 
 
 class TestClusterInfo(unittest.TestCase):
@@ -17,28 +17,29 @@ class TestClusterInfo(unittest.TestCase):
         )
         self.assertEqual(self.cluster_info.get_cluster_name(), "test_cluster")
 
+    @patch("subprocess.run")
+    def test_get_cluster_name_error(self, mock_run):
         # Mock failed command
         mock_run.side_effect = subprocess.SubprocessError()
         with self.assertRaises(RuntimeError):
             self.cluster_info.get_cluster_name()
 
-    @patch('cluster_info.ClusterInfo.get_gpu_generation_and_count')
+    @patch("clusterscope.cluster_info.ClusterInfo.get_gpu_generation_and_count")
     def test_has_gpu_type_true(self, mock_get_gpu_generation_and_count):
         # Set up the mock to return a dictionary with the GPU type we're looking for
-        mock_get_gpu_generation_and_count.return_value = {'A100': 4, 'V100': 2}
+        mock_get_gpu_generation_and_count.return_value = {"A100": 4, "V100": 2}
 
         # Create an instance of the class containing the has_gpu_type method
         gpu_manager = ClusterInfo()
 
-        result = gpu_manager.has_gpu_type('A100')
+        result = gpu_manager.has_gpu_type("A100")
         self.assertTrue(result)
 
-        result = gpu_manager.has_gpu_type('H100')
+        result = gpu_manager.has_gpu_type("H100")
         self.assertFalse(result)
 
-        result = gpu_manager.has_gpu_type('V100')
+        result = gpu_manager.has_gpu_type("V100")
         self.assertTrue(result)
-
 
     @patch("subprocess.run")
     def test_is_aws_cluster(self, mock_run):

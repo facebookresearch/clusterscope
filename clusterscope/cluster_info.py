@@ -1,7 +1,9 @@
-import subprocess
-from typing import Dict, Set
 import logging
 import re
+import subprocess
+from functools import lru_cache
+from typing import Dict, Set
+
 
 class ClusterInfo:
     """A class to provide information about the Slurm cluster configuration.
@@ -26,6 +28,7 @@ class ClusterInfo:
         except (subprocess.SubprocessError, FileNotFoundError):
             raise RuntimeError("Slurm commands are not available on this system")
 
+    @lru_cache(maxsize=1)
     def get_cluster_name(self) -> str:
         """Get the name of the Slurm cluster.
 
@@ -52,13 +55,12 @@ class ClusterInfo:
         except subprocess.SubprocessError as e:
             raise RuntimeError(f"Failed to get cluster name: {str(e)}")
 
-
     def get_cpus_per_node(self) -> int:
         """Get the number of CPUs for each node in the cluster.
-    
+
         Returns:
             int: The number of CPUs per node, assuming all nodes have the same CPU count.
-    
+
         Raises:
             RuntimeError: If unable to retrieve node information or if nodes have different CPU counts.
         """
@@ -70,9 +72,9 @@ class ClusterInfo:
                 text=True,
                 check=True,
             )
-    
+
             cpus_per_node = set()
-    
+
             logging.debug("Parsing node information...")
             for line in result.stdout.splitlines():
                 # sinfo -o %c output format: "CPUs\n"
@@ -80,23 +82,22 @@ class ClusterInfo:
                 if match:
                     cpus = int(match.group(1))
                     cpus_per_node.add(cpus)
-    
+
             if len(cpus_per_node) > 1:
                 raise RuntimeError(f"Nodes have different CPU counts: {cpus_per_node}")
             elif not cpus_per_node:
                 raise RuntimeError("No node information found")
-    
+
             return list(cpus_per_node)[0]
-    
+
         except subprocess.SubprocessError as e:
             logging.error(f"Failed to get CPU information: {str(e)}")
             raise RuntimeError(f"Failed to get CPU information: {str(e)}")
 
-
     def get_gpu_generation_and_count(self):
         """
         Detects the GPU generation and count per server using `sinfo`.
-        
+
         Returns:
             dict: A dictionary with GPU generation as keys and counts as values.
         """
@@ -109,7 +110,7 @@ class ClusterInfo:
                 text=True,
                 check=True,
             )
-            
+
             # Parse output
             gpu_info = {}
             logging.debug("Parsing node information...")
@@ -119,12 +120,11 @@ class ClusterInfo:
                     gpu_gen = parts[1]
                     gpu_count = int(parts[2].split("(")[0])
                     gpu_info[gpu_gen] = gpu_info.get(gpu_gen, 0) + gpu_count
-            
+
             return gpu_info
         except subprocess.SubprocessError as e:
             logging.error(f"Failed to get CPU information: {str(e)}")
             raise RuntimeError(f"Failed to get CPU information: {str(e)}")
-
 
     def get_gpu_generations(self) -> Set[str]:
         """Get the set of GPU generations available in the cluster.
@@ -163,7 +163,6 @@ class ClusterInfo:
 
         except subprocess.SubprocessError as e:
             raise RuntimeError(f"Failed to get GPU information: {str(e)}")
-
 
     def has_gpu_type(self, gpu_type: str) -> bool:
         """Check if a specific GPU type is available in the cluster.
