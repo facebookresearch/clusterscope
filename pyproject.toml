@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 [build-system]
-requires = ["setuptools>=79", "wheel", "setuptools_scm[toml]>=6.0"]
+requires = ["setuptools>=76", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
