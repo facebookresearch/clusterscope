@@ -25,7 +25,7 @@ jobs:
 
       - name: Install requirements
         run: |
-          make install-dev-requirements
+          make install-requirements
           make install
 
       - name: print clusterscope version
