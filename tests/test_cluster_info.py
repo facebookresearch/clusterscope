@@ -2,7 +2,7 @@ import subprocess
 import unittest
 from unittest.mock import MagicMock, patch
 
-from clusterscope.cluster_info import ClusterInfo
+from clusterscope.cluster_info import AWSClusterInfo, ClusterInfo
 
 
 class TestClusterInfo(unittest.TestCase):
@@ -41,26 +41,31 @@ class TestClusterInfo(unittest.TestCase):
         result = gpu_manager.has_gpu_type("V100")
         self.assertTrue(result)
 
+
+class TestAWSClusterInfo(unittest.TestCase):
+    def setUp(self):
+        self.aws_cluster_info = AWSClusterInfo()
+
     @patch("subprocess.run")
     def test_is_aws_cluster(self, mock_run):
         # Mock AWS environment
         mock_run.return_value = MagicMock(stdout="amazon_ec2", returncode=0)
-        self.assertTrue(self.cluster_info.is_aws_cluster())
+        self.assertTrue(self.aws_cluster_info.is_aws_cluster())
 
         # Mock non-AWS environment
         mock_run.return_value = MagicMock(stdout="other_system", returncode=0)
-        self.assertFalse(self.cluster_info.is_aws_cluster())
+        self.assertFalse(self.aws_cluster_info.is_aws_cluster())
 
     def test_get_aws_nccl_settings(self):
         # Test with AWS cluster
-        with patch.object(ClusterInfo, "is_aws_cluster", return_value=True):
-            settings = self.cluster_info.get_aws_nccl_settings()
+        with patch.object(AWSClusterInfo, "is_aws_cluster", return_value=True):
+            settings = self.aws_cluster_info.get_aws_nccl_settings()
             self.assertIn("FI_PROVIDER", settings)
             self.assertEqual(settings["FI_PROVIDER"], "efa")
 
         # Test with non-AWS cluster
-        with patch.object(ClusterInfo, "is_aws_cluster", return_value=False):
-            settings = self.cluster_info.get_aws_nccl_settings()
+        with patch.object(AWSClusterInfo, "is_aws_cluster", return_value=False):
+            settings = self.aws_cluster_info.get_aws_nccl_settings()
             self.assertEqual(settings, {})
 
 

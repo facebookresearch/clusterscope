@@ -176,6 +176,8 @@ class ClusterInfo:
         gpu_counts = self.get_gpu_generation_and_count()
         return gpu_type.upper() in gpu_counts
 
+
+class AWSClusterInfo:
     def is_aws_cluster(self) -> bool:
         """Check if the cluster is running on AWS.
 
