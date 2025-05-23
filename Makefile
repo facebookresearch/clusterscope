@@ -17,7 +17,7 @@ activate:
 	. $(VENV)/bin/activate
 
 install: venv activate
-	uv pip install -e .[dev]
+	uv pip install -e .
 
 install-requirements: install
 	uv pip install -r requirements.txt
