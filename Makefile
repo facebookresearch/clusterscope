@@ -13,16 +13,19 @@ endif
 venv: ensure-uv
 	uv venv
 
-install: venv
-	. $(VENV)/bin/activate && uv pip install -e .[dev]
+activate: venv
+	. $(VENV)/bin/activate
 
-install-requirements: venv
-	. $(VENV)/bin/activate && uv pip install -r requirements.txt
+install: activate
+	uv pip install -e .[dev]
 
-install-dev-requirements: venv
-	. $(VENV)/bin/activate && uv pip install -r dev-requirements.txt
+install-requirements: install
+	uv pip install -r requirements.txt
 
-test:
+install-dev-requirements: install
+	uv pip install -r dev-requirements.txt
+
+test: install-requirements
 	python -m unittest discover -s tests
 
 requirements.txt: pyproject.toml
