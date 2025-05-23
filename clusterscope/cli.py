@@ -4,7 +4,7 @@ import json
 import sys
 from typing import Any, Dict
 
-from cluster_info import ClusterInfo
+from clusterscope.cluster_info import ClusterInfo
 
 
 def format_dict(data: Dict[str, Any]) -> str:

@@ -1,6 +1,6 @@
 # Cluster Scope
 
-clusterscope is a suite of python tooling commonly used by to get state information on HPC Clusters from things like the Cluster itself, hardware, software, etc.
+clusterscope is a binary and python library to extract core information from HPC Clusters.
 
 ## Install from pypi
 
@@ -8,12 +8,21 @@ clusterscope is a suite of python tooling commonly used by to get state informat
 $ pip install clusterscope
 ```
 
-running the library:
+You can use it as a python library:
 
 ```bash
 $ python
 >>> import clusterscope
-# TODO: show a basic example
+>>> clusterscope.cluster()
+'<your-cluster-name>'
+```
+
+You can also use it as a CLI:
+
+```bash
+$ cscope
+usage: cscope [-h] {info,cpus,gpus,check-gpu,aws} ...
+...
 ```
 
 ## Contributing
