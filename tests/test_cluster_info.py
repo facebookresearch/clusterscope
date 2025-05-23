@@ -36,7 +36,7 @@ class TestClusterInfo(unittest.TestCase):
     def test_get_max_job_lifetime(self, mock_run):
         # Mock successful max job lifetime retrieval
         mock_run.return_value = MagicMock(
-            stdout="MaxJobTime=7-00:00:00\nOther=value", returncode=0
+            stdout="MaxJobTime=1-00:00:00\nOther=value", returncode=0
         )
         self.assertEqual(self.cluster_info.get_max_job_lifetime(), "1-00:00:00")
 
