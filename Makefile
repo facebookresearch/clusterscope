@@ -13,10 +13,10 @@ endif
 venv: ensure-uv
 	uv venv
 
-activate: venv
+activate:
 	. $(VENV)/bin/activate
 
-install: activate
+install: venv activate
 	uv pip install -e .[dev]
 
 install-requirements: install
