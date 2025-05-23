@@ -134,9 +134,9 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install dev requirements
+      - name: Install requirements
         run: |
-          make install-dev-requirements
+          make install-requirements
           make install
 
       - name: Run tests
