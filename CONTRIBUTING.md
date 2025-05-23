@@ -2,7 +2,50 @@
 
 ## Development Workflow
 
-TODO: show development workflow
+### Environment setup
+
+Running the below from the root of this repository brings [uv](https://docs.astral.sh/uv/), all required development dependencies, and installs clusterscope in editable mode:
+
+```bash
+make install-dev-requirements
+```
+
+This should get you started with a binary and library available in your local environment:
+
+```bash
+$ python
+>>> import clusterscope
+>>> clusterscope.cluster()
+'<your-cluster-name>'
+```
+
+```bash
+$ cscope
+usage: cscope [-h] {info,cpus,gpus,check-gpu,aws} ...
+...
+```
+
+### `pre-commit`
+
+We have all linters/formatters/typecheckers integrated into pre-commit, these checks are also running as part of github CI. pre-commit automates part of the changes that will be required to land code on the repo. You can run the below to activate pre-commit in your local env:
+
+```
+pre-commit install
+```
+
+### Requirements
+
+If you update the requirements, make sure to add it [`pyproject.toml`](./pyproject.toml)'s appropriate section for the dependency. Then you can run the below to update the requirements file:
+
+```
+$ make requirements.txt:
+```
+
+For development dependencies:
+
+```
+$ make dev-requirements.txt:
+```
 
 ## Pull Requests
 We welcome your pull requests.
