@@ -1,13 +1,13 @@
 import ast
 import functools
 from pathlib import Path
-from typing import Any, Callable, Hashable
+from typing import Any, Callable, Dict, Hashable, Union
 
 CACHE_PATH = "/tmp/clusterscopewhoami"
 
 
 def save(
-    values: dict[Hashable, str | float | bool | int], filepath: str = CACHE_PATH
+    values: Dict[Hashable, Union[str, float, bool, int]], filepath: str = CACHE_PATH
 ) -> None:
     loaded = load()
 
@@ -18,8 +18,8 @@ def save(
                 f.write(f"{key}={repr(val)}\n")
 
 
-def load(filepath: str = CACHE_PATH) -> dict[Hashable, str | float | bool | int]:
-    loaded: dict[Hashable, str | float | bool | int] = {}
+def load(filepath: str = CACHE_PATH) -> Dict[Hashable, Union[str, float, bool, int]]:
+    loaded: Dict[Hashable, Union[str, float, bool, int]] = {}
     path = Path(filepath)
     if path.exists():
         with path.open("r") as f:
