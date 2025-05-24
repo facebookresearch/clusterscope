@@ -7,8 +7,9 @@ import logging
 import re
 import shutil
 import subprocess
-from functools import lru_cache
 from typing import Dict, Set
+
+from clusterscope.cache import fs_cache
 
 
 class ClusterInfo:
@@ -35,7 +36,7 @@ class ClusterInfo:
         except (subprocess.SubprocessError, FileNotFoundError):
             raise RuntimeError("Slurm commands are not available on this system")
 
-    @lru_cache(maxsize=1)
+    @fs_cache(var_name="SLURM_CLUSTER_NAME")
     def get_cluster_name(self) -> str:
         """Get the name of the Slurm cluster.
 
