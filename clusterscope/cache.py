@@ -19,7 +19,7 @@ def save(
 
 
 def load(filepath: str = CACHE_PATH) -> dict[Hashable, str | float | bool | int]:
-    loaded = {}
+    loaded: dict[Hashable, str | float | bool | int] = {}
     path = Path(filepath)
     if path.exists():
         with path.open("r") as f:
