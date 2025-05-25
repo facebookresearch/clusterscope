@@ -144,7 +144,7 @@ class ClusterInfo:
         """
         try:
             result = subprocess.run(
-                ["scontrol", "show", "node"],
+                ["sinfo", "-o", "%G"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
@@ -154,14 +154,10 @@ class ClusterInfo:
             gpu_generations = set()
 
             for line in result.stdout.split("\n"):
-                if "Gres=" in line:
-                    gres_parts = line.split("Gres=")[1].split()[0].split(",")
-                    for part in gres_parts:
-                        if part.startswith("gpu:"):
-                            # Handle formats like "gpu:a100:4" or "gpu:4"
-                            gpu_info = part.split(":")
-                            if len(gpu_info) >= 2 and not gpu_info[1].isdigit():
-                                gpu_generations.add(gpu_info[1].upper())
+                if line.strip():
+                    parts = line.split(":")
+                    if len(parts) >= 2 and not parts[1].isdigit():
+                        gpu_generations.add(parts[1].upper())
 
             if not gpu_generations:
                 return set()  # Return empty set if no GPUs found

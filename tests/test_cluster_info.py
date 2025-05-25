@@ -56,6 +56,49 @@ class TestClusterInfo(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             self.cluster_info.get_max_job_lifetime()
 
+    @patch("subprocess.run")
+    def test_get_gpu_generations(self, mock_run):
+        # Mock successful GPU generations retrieval using 'sinfo -o %G'
+        mock_run.return_value = MagicMock(
+            stdout="GRES\ngres:gpu:a100:4\ngres:gpu:v100:2\ngres:gpu:p100:8\nother:resource:1",
+            returncode=0
+        )
+
+        # Create an instance of the class
+        cluster_info = ClusterInfo()
+
+        # Call the method and check the result
+        result = cluster_info.get_gpu_generations()
+        expected = {"A100", "V100", "P100"}
+        self.assertEqual(result, expected)
+
+    @patch("subprocess.run")
+    def test_get_gpu_generations_no_gpus(self, mock_run):
+        # Mock output with no GPU information
+        mock_run.return_value = MagicMock(
+            stdout="GRES\nother:resource:1\n",
+            returncode=0
+        )
+
+        # Create an instance of the class
+        cluster_info = ClusterInfo()
+
+        # Call the method and check the result
+        result = cluster_info.get_gpu_generations()
+        self.assertEqual(result, set())  # Should return an empty set
+
+    @patch("subprocess.run")
+    def test_get_gpu_generations_error(self, mock_run):
+        # Mock failed command
+        mock_run.side_effect = subprocess.SubprocessError()
+
+        # Create an instance of the class
+        cluster_info = ClusterInfo()
+
+        # Check that RuntimeError is raised
+        with self.assertRaises(RuntimeError):
+            cluster_info.get_gpu_generations()
+
     @patch("clusterscope.cluster_info.ClusterInfo.get_gpu_generation_and_count")
     def test_has_gpu_type_true(self, mock_get_gpu_generation_and_count):
         # Set up the mock to return a dictionary with the GPU type we're looking for
