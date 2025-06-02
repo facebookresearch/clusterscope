@@ -34,7 +34,7 @@ moreorless==0.5.0
     # via
     #   ufmt
     #   usort
-mypy==1.15.0
+mypy==1.16.0
     # via clusterscope (pyproject.toml)
 mypy-extensions==1.1.0
     # via
