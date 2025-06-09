@@ -75,7 +75,7 @@ tomli==2.2.1
     #   black
     #   build
     #   mypy
-tomlkit==0.13.2
+tomlkit==0.13.3
     # via ufmt
 trailrunner==1.4.0
     # via
