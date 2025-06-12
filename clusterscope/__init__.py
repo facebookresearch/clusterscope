@@ -3,8 +3,6 @@
 
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
-__version__ = "0.0.0"
+from clusterscope.lib import cluster, slurm_version
 
-from clusterscope.lib import cluster
-
-__all__ = ["cluster"]
+__all__ = ["cluster", "slurm_version"]

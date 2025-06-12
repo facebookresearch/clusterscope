@@ -36,6 +36,30 @@ class ClusterInfo:
         except (subprocess.SubprocessError, FileNotFoundError):
             raise RuntimeError("Slurm commands are not available on this system")
 
+    @fs_cache(var_name="SLURM_VERSION")
+    def get_slurm_version(self, timeout: int = 60) -> str:
+        """Get the slurm version
+
+        ```
+        $ sinfo -V
+        slurm 24.11.4
+        ```
+
+        Returns:
+            str: Slurm version as a string: "24.11.4"
+
+        Raises:
+            RuntimeError: If unable to retrieve cluster information.
+        """
+        try:
+            slurm_version = subprocess.check_output(
+                ["sinfo", "-V"], text=True, timeout=timeout
+            )
+
+            return str(slurm_version.strip().split(" ")[1])
+        except subprocess.SubprocessError as e:
+            raise RuntimeError(f"Failed to get slurm version: {str(e)}")
+
     @fs_cache(var_name="SLURM_CLUSTER_NAME")
     def get_cluster_name(self) -> str:
         """Get the name of the Slurm cluster.

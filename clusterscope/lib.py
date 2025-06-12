@@ -10,3 +10,7 @@ cluster_info = ClusterInfo()
 
 def cluster() -> str:
     return cluster_info.get_cluster_name()
+
+
+def slurm_version() -> str:
+    return cluster_info.get_slurm_version()

@@ -61,7 +61,9 @@ def main():
 
         if args.command == "info":
             cluster_name = cluster_info.get_cluster_name()
+            slurm_version = cluster_info.get_slurm_version()
             print(f"Cluster Name: {cluster_name}")
+            print(f"Slurm Version: {slurm_version}")
 
         elif args.command == "cpus":
             cpus_per_node = cluster_info.get_cpus_per_node()
