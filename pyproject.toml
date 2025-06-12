@@ -1,0 +1,50 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+
+[build-system]
+requires = ["setuptools>=75", "wheel", "setuptools-scm[toml]>=6.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "clusterscope"
+dynamic = ["version"]
+readme = "README.md"
+description = "clusterscope is a python library to extract core information from HPC Clusters"
+requires-python = ">=3.8"
+license = {file = "LICENSE"}
+authors = [
+  {name = "Lucca Bertoncini", email = "luccab@meta.com"},
+  {name = "Kalyan Saladi", email = "skalyan@meta.com"}
+]
+dependencies = []
+
+[project.scripts]
+cscope = "clusterscope.cli:main"
+
+[project.optional-dependencies]
+dev = [
+  "flake8",
+  "black",
+  "ufmt",
+  "usort",
+  "mypy",
+  "pre-commit",
+  "build",
+]
+
+[tool.setuptools]
+packages = ["clusterscope"]
+
+[tool.setuptools.package-data]
+"clusterscope" = ["py.typed"]
+
+[project.urls]
+Homepage = "https://github.com/facebookresearch/clusterscope"
+Issues = "https://github.com/facebookresearch/clusterscope/issues"
+
+[tool.setuptools_scm]
+version_scheme = "post-release"
+local_scheme = "no-local-version"
