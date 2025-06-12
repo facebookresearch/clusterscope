@@ -15,7 +15,10 @@ readme = "README.md"
 description = "clusterscope is a python library to extract core information from HPC Clusters"
 requires-python = ">=3.8"
 license = {file = "LICENSE"}
-author = "Kalyan Saladi <skalyan@meta.com>, Lucca Bertoncini <luccab@meta.com>"
+authors = [
+  {name = "Lucca Bertoncini", email = "luccab@meta.com"},
+  {name = "Kalyan Saladi", email = "skalyan@meta.com"}
+]
 dependencies = []
 
 [project.scripts]
