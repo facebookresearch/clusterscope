@@ -38,6 +38,9 @@ dev = [
 [tool.setuptools]
 packages = ["clusterscope"]
 
+[tool.setuptools.package-data]
+"clusterscope" = ["py.typed"]
+
 [project.urls]
 Homepage = "https://github.com/facebookresearch/clusterscope"
 Issues = "https://github.com/facebookresearch/clusterscope/issues"
