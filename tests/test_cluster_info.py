@@ -61,7 +61,7 @@ class TestClusterInfo(unittest.TestCase):
         # Mock successful GPU generations retrieval using 'sinfo -o %G'
         mock_run.return_value = MagicMock(
             stdout="GRES\ngres:gpu:a100:4\ngres:gpu:v100:2\ngres:gpu:p100:8\nother:resource:1",
-            returncode=0
+            returncode=0,
         )
 
         # Create an instance of the class
@@ -76,8 +76,7 @@ class TestClusterInfo(unittest.TestCase):
     def test_get_gpu_generations_no_gpus(self, mock_run):
         # Mock output with no GPU information
         mock_run.return_value = MagicMock(
-            stdout="GRES\nother:resource:1\n",
-            returncode=0
+            stdout="GRES\nother:resource:1\n", returncode=0
         )
 
         # Create an instance of the class

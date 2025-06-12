@@ -55,6 +55,22 @@ We welcome your pull requests.
 1. Ensure the test suite and lint pass.
 1. If you haven't already, complete the Contributor License Agreement ("CLA").
 
+## Release
+
+1. Checkout and pull latest master
+```
+$ git checkout main
+$ git pull origin main
+```
+2. Tag
+```
+$ git tag -a v0.0.0 -m "Release 0.0.0"
+```
+3. Push the tag to github
+```
+$ git push origin v0.0.0
+```
+
 ## Contributor License Agreement ("CLA")
 In order to accept your pull request, we need you to submit a CLA. You only need
 to do this once to work on any of Facebook's open source projects.
