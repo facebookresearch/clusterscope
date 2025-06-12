@@ -14,7 +14,7 @@ venv: ensure-uv
 	uv venv
 
 activate:
-	. $(VENV)/bin/activate
+	. $(VENV)/bin/activate || source $(VENV)/bin/activate
 
 install: venv activate
 	uv pip install -e .

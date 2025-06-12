@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 [build-system]
-requires = ["setuptools>=75", "wheel"]
+requires = ["setuptools>=75", "wheel", "setuptools-scm[toml]>=6.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -35,7 +35,7 @@ dev = [
   "ufmt",
   "usort",
   "mypy",
-  "pre-commit>=3.8.0",
+  "pre-commit",
   "build",
 ]
 
@@ -45,3 +45,7 @@ packages = ["clusterscope"]
 [project.urls]
 Homepage = "https://github.com/facebookresearch/clusterscope"
 Issues = "https://github.com/facebookresearch/clusterscope/issues"
+
+[tool.setuptools_scm]
+version_scheme = "post-release"
+local_scheme = "no-local-version"
