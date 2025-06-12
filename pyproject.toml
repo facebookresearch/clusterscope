@@ -19,10 +19,6 @@ authors = [
   {name = "Lucca Bertoncini", email = "luccab@meta.com"},
   {name = "Kalyan Saladi", email = "skalyan@meta.com"}
 ]
-maintainers = [
-  {name = "Lucca Bertoncini", email = "luccab@meta.com"},
-  {name = "Kalyan Saladi", email = "skalyan@meta.com"}
-]
 dependencies = []
 
 [project.scripts]

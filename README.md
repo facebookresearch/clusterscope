@@ -33,6 +33,10 @@ Read our contributing guide to learn about our development process, how to propo
 
 Facebook has adopted a Code of Conduct that we expect project participants to adhere to. Please read [the full text](https://code.fb.com/codeofconduct) so that you can understand what actions will and will not be tolerated.
 
+## Mantainers
+
+clusterscope is actively maintained by [Lucca Bertoncini](https://github.com/luccabb), and [Kalyan Salady](https://github.com/skalyan).
+
 ### License
 
 clusterscope is licensed under the [MIT](./LICENSE) license.
