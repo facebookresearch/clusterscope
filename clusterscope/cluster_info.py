@@ -57,7 +57,7 @@ class ClusterInfo:
             )
 
             return str(slurm_version.strip().split(" ")[1])
-        except subprocess.SubprocessError as e:
+        except (subprocess.SubprocessError, FileNotFoundError) as e:
             raise RuntimeError(f"Failed to get slurm version: {str(e)}")
 
     @fs_cache(var_name="SLURM_CLUSTER_NAME")
@@ -84,7 +84,7 @@ class ClusterInfo:
                     return line.split("=")[1].strip()
 
             raise RuntimeError("Could not find cluster name in scontrol output")
-        except subprocess.SubprocessError as e:
+        except (subprocess.SubprocessError, FileNotFoundError) as e:
             raise RuntimeError(f"Failed to get cluster name: {str(e)}")
 
     def get_cpus_per_node(self) -> int:
@@ -122,7 +122,7 @@ class ClusterInfo:
 
             return list(cpus_per_node)[0]
 
-        except subprocess.SubprocessError as e:
+        except (subprocess.SubprocessError, FileNotFoundError) as e:
             logging.error(f"Failed to get CPU information: {str(e)}")
             raise RuntimeError(f"Failed to get CPU information: {str(e)}")
 
@@ -154,7 +154,7 @@ class ClusterInfo:
                     gpu_info[gpu_gen] = gpu_info.get(gpu_gen, 0) + gpu_count
 
             return gpu_info
-        except subprocess.SubprocessError as e:
+        except (subprocess.SubprocessError, FileNotFoundError) as e:
             logging.error(f"Failed to get CPU information: {str(e)}")
             raise RuntimeError(f"Failed to get CPU information: {str(e)}")
 
@@ -189,7 +189,7 @@ class ClusterInfo:
 
             return gpu_generations
 
-        except subprocess.SubprocessError as e:
+        except (subprocess.SubprocessError, FileNotFoundError) as e:
             raise RuntimeError(f"Failed to get GPU information: {str(e)}")
 
     def has_gpu_type(self, gpu_type: str) -> bool:
@@ -227,7 +227,7 @@ class ClusterInfo:
                     return line.split("=")[1].strip()
 
             raise RuntimeError("Could not find MaxJobTime in scontrol output")
-        except subprocess.SubprocessError as e:
+        except (subprocess.SubprocessError, FileNotFoundError) as e:
             raise RuntimeError(f"Failed to get maximum job lifetime: {str(e)}")
 
 
