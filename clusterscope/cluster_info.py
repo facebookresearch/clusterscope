@@ -57,7 +57,7 @@ class ClusterInfo:
             )
 
             return str(slurm_version.strip().split(" ")[1])
-        except subprocess.SubprocessError as e:
+        except (FileNotFoundError, subprocess.SubprocessError) as e:
             raise RuntimeError(f"Failed to get slurm version: {str(e)}")
 
     @fs_cache(var_name="SLURM_CLUSTER_NAME")
