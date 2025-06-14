@@ -31,6 +31,9 @@ class TestClusterInfo(unittest.TestCase):
         mock_run.side_effect = subprocess.SubprocessError()
         with self.assertRaises(RuntimeError):
             self.cluster_info.get_cluster_name()
+        mock_run.side_effect = FileNotFoundError()
+        with self.assertRaises(RuntimeError):
+            self.cluster_info.get_cluster_name()
 
     @patch("subprocess.run")
     def test_get_max_job_lifetime(self, mock_run):
@@ -44,6 +47,9 @@ class TestClusterInfo(unittest.TestCase):
     def test_get_max_job_lifetime_error(self, mock_run):
         # Mock failed command
         mock_run.side_effect = subprocess.SubprocessError()
+        with self.assertRaises(RuntimeError):
+            self.cluster_info.get_max_job_lifetime()
+        mock_run.side_effect = FileNotFoundError()
         with self.assertRaises(RuntimeError):
             self.cluster_info.get_max_job_lifetime()
 
@@ -88,12 +94,15 @@ class TestClusterInfo(unittest.TestCase):
 
     @patch("subprocess.run")
     def test_get_gpu_generations_error(self, mock_run):
-        # Mock failed command
-        mock_run.side_effect = subprocess.SubprocessError()
-
         # Create an instance of the class
         cluster_info = ClusterInfo()
 
+        # Mock failed command
+        mock_run.side_effect = subprocess.SubprocessError()
+        # Check that RuntimeError is raised
+        with self.assertRaises(RuntimeError):
+            cluster_info.get_gpu_generations()
+        mock_run.side_effect = FileNotFoundError()
         # Check that RuntimeError is raised
         with self.assertRaises(RuntimeError):
             cluster_info.get_gpu_generations()
