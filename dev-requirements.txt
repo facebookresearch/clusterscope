@@ -58,7 +58,7 @@ pre-commit==4.2.0
     # via clusterscope (pyproject.toml)
 pycodestyle==2.13.0
     # via flake8
-pyflakes==3.3.2
+pyflakes==3.4.0
     # via flake8
 pyproject-hooks==1.2.0
     # via build
