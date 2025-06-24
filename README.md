@@ -35,7 +35,7 @@ Facebook has adopted a Code of Conduct that we expect project participants to ad
 
 ## Mantainers
 
-clusterscope is actively maintained by [Lucca Bertoncini](https://github.com/luccabb), and [Kalyan Salady](https://github.com/skalyan).
+clusterscope is actively maintained by [Lucca Bertoncini](https://github.com/luccabb), and [Kalyan Saladi](https://github.com/skalyan).
 
 ### License
 
