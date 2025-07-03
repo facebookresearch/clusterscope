@@ -103,7 +103,7 @@ class LocalNodeInfo:
                 timeout=timeout,
             )
 
-            gpu_info = defaultdict(int)
+            gpu_info: Dict[str, int] = defaultdict(int)
             for line in result.strip().split("\n"):
                 parts = line.split()
                 gpu_gen = parts[1]
@@ -248,7 +248,7 @@ class SlurmClusterInfo:
             )
 
             # Parse output
-            gpu_info = {}
+            gpu_info: Dict[str, int] = {}
             logging.debug("Parsing node information...")
             for line in result.stdout.splitlines():
                 parts = line.split(":")
