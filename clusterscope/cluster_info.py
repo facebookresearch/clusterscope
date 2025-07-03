@@ -168,9 +168,9 @@ class LocalNodeInfo:
         """
         system = platform.system()
         if system == "Linux":
-            return LinuxInfo.get_cpu_count(self, timeout)
+            return LinuxInfo().get_cpu_count(timeout)
         if system == "Darwin":
-            return DarwinInfo.get_cpu_count(self, timeout)
+            return DarwinInfo().get_cpu_count(timeout)
         raise RuntimeError(f"Unsupported system: {system}")
 
     @fs_cache(var_name="LOCAL_NODE_MEM")
@@ -185,9 +185,9 @@ class LocalNodeInfo:
         """
         system = platform.system()
         if system == "Linux":
-            return LinuxInfo.get_mem(self, timeout)
+            return LinuxInfo().get_mem(timeout)
         if system == "Darwin":
-            return DarwinInfo.get_mem(self, timeout)
+            return DarwinInfo().get_mem(timeout)
         raise RuntimeError(f"Unsupported system: {system}")
 
     def get_gpu_generation_and_count(self, timeout: int = 60) -> Dict[str, int]:
