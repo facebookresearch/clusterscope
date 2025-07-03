@@ -26,7 +26,7 @@ class UnifiedInfo:
         Returns:
             str: The name of the Slurm cluster.
         """
-        if self.slurm_cluster_info.is_slurm_cluster:
+        if self.is_slurm_cluster:
             return self.slurm_cluster_info.get_cluster_name()
         return "local-node"
 
@@ -285,8 +285,8 @@ class SlurmClusterInfo:
             for line in result.stdout.split("\n"):
                 if line.strip():
                     parts = line.split(":")
-                    if len(parts) >= 2 and not parts[1].isdigit():
-                        gpu_generations.add(parts[1].upper())
+                    if len(parts) >= 2 and not parts[2].isdigit():
+                        gpu_generations.add(parts[2].upper())
 
             if not gpu_generations:
                 return set()  # Return empty set if no GPUs found

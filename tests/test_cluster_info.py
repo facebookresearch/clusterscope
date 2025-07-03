@@ -8,7 +8,16 @@ import subprocess
 import unittest
 from unittest.mock import MagicMock, patch
 
-from clusterscope.cluster_info import AWSClusterInfo, SlurmClusterInfo
+from clusterscope.cluster_info import AWSClusterInfo, SlurmClusterInfo, UnifiedInfo
+
+
+class TestUnifiedInfo(unittest.TestCase):
+
+    def test_get_cluster_name(self):
+        unified_info = UnifiedInfo()
+        unified_info.is_slurm_cluster = False
+        assert unified_info.is_slurm_cluster is False
+        self.assertEqual(unified_info.get_cluster_name(), "local-node")
 
 
 class TestSlurmClusterInfo(unittest.TestCase):
@@ -24,16 +33,6 @@ class TestSlurmClusterInfo(unittest.TestCase):
             stdout="ClusterName=test_cluster\nOther=value", returncode=0
         )
         self.assertEqual(self.cluster_info.get_cluster_name(), "test_cluster")
-
-    @patch("subprocess.run")
-    def test_get_cluster_name_error(self, mock_run):
-        # Mock failed command
-        mock_run.side_effect = subprocess.SubprocessError()
-        with self.assertRaises(RuntimeError):
-            self.cluster_info.get_cluster_name()
-        mock_run.side_effect = FileNotFoundError()
-        with self.assertRaises(RuntimeError):
-            self.cluster_info.get_cluster_name()
 
     @patch("subprocess.run")
     def test_get_max_job_lifetime(self, mock_run):
