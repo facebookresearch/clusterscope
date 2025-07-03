@@ -4,6 +4,7 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 import logging
+import platform
 import shutil
 import subprocess
 from collections import defaultdict
@@ -50,7 +51,7 @@ class UnifiedInfo:
         return self.local_node_info.get_cpu_count()
 
     def get_mem_per_node(self) -> int:
-        """Get the minimum memory available per node in the cluster. Returns 0 if not a Slurm cluster.
+        """Get the minimum memory available per node in the cluster in MB. Returns 0 if not a Slurm cluster.
 
         Returns:
             int: The memory per node in the cluster.
@@ -70,14 +71,45 @@ class UnifiedInfo:
         return self.local_node_info.get_gpu_generation_and_count()
 
 
-class LocalNodeInfo:
-    """A class to provide information about the local node.
+class DarwinInfo:
+    def get_cpu_count(self, timeout: int = 60) -> int:
+        """Get the number of CPUs on the local node.
 
-    This class offers methods to query various aspects of the local node,
-    such as CPU and GPU information.
-    """
+        Returns:
+            int: The number of CPUs on the local node.
 
-    @fs_cache(var_name="LOCAL_NODE_CPU_COUNT")
+        Raises:
+            RuntimeError: If unable to retrieve CPU information.
+        """
+        try:
+            result = subprocess.check_output(
+                ["sysctl", "-n", "hw.ncpu"], text=True, timeout=timeout
+            )
+
+            return int(result.strip())
+        except (subprocess.SubprocessError, FileNotFoundError) as e:
+            raise RuntimeError(f"Failed to get CPU information: {str(e)}")
+
+    def get_mem(self, timeout: int = 60) -> int:
+        """Get the amount of memory on the local node.
+
+        Returns:
+            int: The amount of memory on the local node.
+
+        Raises:
+            RuntimeError: If unable to retrieve memory information.
+        """
+        try:
+            result = subprocess.check_output(
+                ["sysctl", "-n", "hw.memsize"], text=True, timeout=timeout
+            )
+
+            return int(result.strip()) // 1024 // 1024
+        except (subprocess.SubprocessError, FileNotFoundError) as e:
+            raise RuntimeError(f"Failed to get memory information: {str(e)}")
+
+
+class LinuxInfo:
     def get_cpu_count(self, timeout: int = 60) -> int:
         """Get the number of CPUs on the local node.
 
@@ -96,7 +128,6 @@ class LocalNodeInfo:
         except (subprocess.SubprocessError, FileNotFoundError) as e:
             raise RuntimeError(f"Failed to get CPU information: {str(e)}")
 
-    @fs_cache(var_name="LOCAL_NODE_MEM")
     def get_mem(self, timeout: int = 60) -> int:
         """Get the amount of memory on the local node.
 
@@ -116,6 +147,48 @@ class LocalNodeInfo:
             raise RuntimeError("Could not find memory information in free output")
         except (subprocess.SubprocessError, FileNotFoundError) as e:
             raise RuntimeError(f"Failed to get memory information: {str(e)}")
+
+
+class LocalNodeInfo:
+    """A class to provide information about the local node.
+
+    This class offers methods to query various aspects of the local node,
+    such as CPU and GPU information.
+    """
+
+    @fs_cache(var_name="LOCAL_NODE_CPU_COUNT")
+    def get_cpu_count(self, timeout: int = 60) -> int:
+        """Get the number of CPUs on the local node.
+
+        Returns:
+            int: The number of CPUs on the local node.
+
+        Raises:
+            RuntimeError: If unable to retrieve CPU information.
+        """
+        system = platform.system()
+        if system == "Linux":
+            return LinuxInfo.get_cpu_count(self, timeout)
+        if system == "Darwin":
+            return DarwinInfo.get_cpu_count(self, timeout)
+        raise RuntimeError(f"Unsupported system: {system}")
+
+    @fs_cache(var_name="LOCAL_NODE_MEM")
+    def get_mem(self, timeout: int = 60) -> int:
+        """Get the amount of memory on the local node.
+
+        Returns:
+            int: The amount of memory on the local node.
+
+        Raises:
+            RuntimeError: If unable to retrieve memory information.
+        """
+        system = platform.system()
+        if system == "Linux":
+            return LinuxInfo.get_mem(self, timeout)
+        if system == "Darwin":
+            return DarwinInfo.get_mem(self, timeout)
+        raise RuntimeError(f"Unsupported system: {system}")
 
     def get_gpu_generation_and_count(self, timeout: int = 60) -> Dict[str, int]:
         """Get the number of GPUs on the local node.
