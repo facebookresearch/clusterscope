@@ -9,7 +9,8 @@ from unittest.mock import MagicMock, patch
 
 from clusterscope.cluster_info import (
     AWSClusterInfo,
-    LocalNodeInfo,
+    DarwinInfo,
+    LinuxInfo,
     SlurmClusterInfo,
     UnifiedInfo,
 )
@@ -23,20 +24,36 @@ class TestUnifiedInfo(unittest.TestCase):
         self.assertEqual(unified_info.get_cluster_name(), "local-node")
 
 
-class TestLocalNodeInfo(unittest.TestCase):
+class TestLinuxInfo(unittest.TestCase):
     def setUp(self):
-        self.local_node_info = LocalNodeInfo()
+        self.linux_info = LinuxInfo()
 
     @patch("subprocess.check_output", return_value="1234")
     def test_get_cpu_count(self, mock_run):
-        self.assertEqual(self.local_node_info.get_cpu_count(), 1234)
+        self.assertEqual(self.linux_info.get_cpu_count(), 1234)
 
     @patch(
         "subprocess.check_output",
         return_value="               total        used\nMem:     12345    123\n",
     )
     def test_get_mem_per_node(self, mock_run):
-        self.assertEqual(self.local_node_info.get_mem(), 12345)
+        self.assertEqual(self.linux_info.get_mem(), 12345)
+
+
+class TestDarwinInfo(unittest.TestCase):
+    def setUp(self):
+        self.darwin_info = DarwinInfo()
+
+    @patch("subprocess.check_output", return_value="10")
+    def test_get_cpu_count(self, mock_run):
+        self.assertEqual(self.darwin_info.get_cpu_count(), 10)
+
+    @patch(
+        "subprocess.check_output",
+        return_value="34359738368",
+    )
+    def test_get_mem_per_node(self, mock_run):
+        self.assertEqual(self.darwin_info.get_mem(), 32768)
 
 
 class TestSlurmClusterInfo(unittest.TestCase):
