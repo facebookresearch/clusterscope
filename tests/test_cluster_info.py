@@ -8,14 +8,14 @@ import subprocess
 import unittest
 from unittest.mock import MagicMock, patch
 
-from clusterscope.cluster_info import AWSClusterInfo, ClusterInfo
+from clusterscope.cluster_info import AWSClusterInfo, SlurmClusterInfo
 
 
-class TestClusterInfo(unittest.TestCase):
+class TestSlurmClusterInfo(unittest.TestCase):
     def setUp(self):
         if shutil.which("sinfo") is None:
             self.skipTest("Machine does not have slurm")
-        self.cluster_info = ClusterInfo()
+        self.cluster_info = SlurmClusterInfo()
 
     @patch("subprocess.run")
     def test_get_cluster_name(self, mock_run):
@@ -71,7 +71,7 @@ class TestClusterInfo(unittest.TestCase):
         )
 
         # Create an instance of the class
-        cluster_info = ClusterInfo()
+        cluster_info = SlurmClusterInfo()
 
         # Call the method and check the result
         result = cluster_info.get_gpu_generations()
@@ -86,7 +86,7 @@ class TestClusterInfo(unittest.TestCase):
         )
 
         # Create an instance of the class
-        cluster_info = ClusterInfo()
+        cluster_info = SlurmClusterInfo()
 
         # Call the method and check the result
         result = cluster_info.get_gpu_generations()
@@ -95,7 +95,7 @@ class TestClusterInfo(unittest.TestCase):
     @patch("subprocess.run")
     def test_get_gpu_generations_error(self, mock_run):
         # Create an instance of the class
-        cluster_info = ClusterInfo()
+        cluster_info = SlurmClusterInfo()
 
         # Mock failed command
         mock_run.side_effect = subprocess.SubprocessError()
@@ -107,13 +107,13 @@ class TestClusterInfo(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             cluster_info.get_gpu_generations()
 
-    @patch("clusterscope.cluster_info.ClusterInfo.get_gpu_generation_and_count")
+    @patch("clusterscope.cluster_info.SlurmClusterInfo.get_gpu_generation_and_count")
     def test_has_gpu_type_true(self, mock_get_gpu_generation_and_count):
         # Set up the mock to return a dictionary with the GPU type we're looking for
         mock_get_gpu_generation_and_count.return_value = {"A100": 4, "V100": 2}
 
         # Create an instance of the class containing the has_gpu_type method
-        gpu_manager = ClusterInfo()
+        gpu_manager = SlurmClusterInfo()
 
         result = gpu_manager.has_gpu_type("A100")
         self.assertTrue(result)

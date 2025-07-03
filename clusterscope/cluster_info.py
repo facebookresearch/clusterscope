@@ -8,11 +8,112 @@ import re
 import shutil
 import subprocess
 from typing import Dict, Set
+from collections import defaultdict
 
 from clusterscope.cache import fs_cache
 
+class UnifiedInfo:
+    def __init__(self):
+        self.local_node_info = LocalNodeInfo()
+        self.slurm_cluster_info = SlurmClusterInfo()
+        self.is_slurm_cluster = self.slurm_cluster_info.verify_slurm_available()
+        self.aws_cluster_info = AWSClusterInfo()
 
-class ClusterInfo:
+    def get_cluster_name(self) -> str:
+        """Get the name of the Slurm cluster. Returns `local-node` if not a Slurm cluster.
+
+        Returns:
+            str: The name of the Slurm cluster.
+        """
+        if self.slurm_cluster_info.is_slurm_cluster()
+            return self.slurm_cluster_info.get_cluster_name()
+        return 'local-node'
+
+    def get_slurm_version(self) -> str:
+        """Get the slurm version. Returns `0` if not a Slurm cluster.
+
+        Returns:
+            str: Slurm version as a string: "24.11.4"
+        """
+        if self.slurm_cluster_info.is_slurm_cluster()
+            return self.slurm_cluster_info.get_slurm_version()
+        return '0'
+    
+    def get_cpus_per_node(self) -> int:
+        """Get the number of CPUs for each node in the cluster. Returns 0 if not a Slurm cluster.
+
+        Returns:
+            int: The number of CPUs per node, assuming all nodes have the same CPU count.
+        """
+        if self.slurm_cluster_info.is_slurm_cluster()
+            return self.slurm_cluster_info.get_cpus_per_node()
+        return self.local_node_info.get_cpu_count()
+    
+    def get_gpu_generation_and_count(self) -> Dict[str, int]:
+        """Get the number of GPUs on the slurm cluster node.
+
+        Returns:
+            dict: A dictionary with GPU generation as keys and counts as values.
+        """
+        if self.slurm_cluster_info.is_slurm_cluster()
+            return self.slurm_cluster_info.get_gpu_generation_and_count()
+        return self.local_node_info.get_gpu_generation_and_count()
+    
+
+class LocalNodeInfo:
+    """A class to provide information about the local node.
+
+    This class offers methods to query various aspects of the local node,
+    such as CPU and GPU information.
+    """
+    
+    @fs_cache(var_name="LOCAL_NODE_CPU_COUNT")
+    def get_cpu_count(self, timeout: int = 60) -> int:
+        """Get the number of CPUs on the local node.
+
+        Returns:
+            int: The number of CPUs on the local node.
+
+        Raises:
+            RuntimeError: If unable to retrieve CPU information.
+        """
+        try:
+            result = subprocess.check_output(
+                ["nproc", "--all"], text=True, timeout=timeout
+            )
+
+            return int(result.strip())
+        except (subprocess.SubprocessError, FileNotFoundError) as e:
+            raise RuntimeError(f"Failed to get CPU information: {str(e)}")
+    
+    def get_gpu_generation_and_count(self, timeout: int = 60) -> Dict[str, int]:
+        """Get the number of GPUs on the local node.
+
+        Returns:
+            int: The number of GPUs on the local node.
+
+        Raises:
+            RuntimeError: If unable to retrieve GPU information.
+        """
+        try:
+            result = subprocess.check_output(
+                ["nvidia-smi", "--query-gpu=gpu_name", "--format=csv,noheader"],
+                text=True,
+                timeout=timeout,
+            )
+
+            gpu_info = defaultdict(int)
+            for line in result.strip().split("\n"):
+                parts = line.split()
+                gpu_gen = parts[1]
+                gpu_info[gpu_gen] += 1
+            return gpu_info
+
+        except (subprocess.SubprocessError, FileNotFoundError) as e:
+            raise RuntimeError(f"Failed to get GPU information: {str(e)}")
+
+
+class SlurmClusterInfo:
     """A class to provide information about the Slurm cluster configuration.
 
     This class offers methods to query various aspects of a Slurm cluster,
@@ -21,10 +122,11 @@ class ClusterInfo:
 
     def __init__(self):
         """Initialize the Cluster instance."""
+        self.is_slurm_cluster = False
         if shutil.which("sinfo") is not None:
-            self._verify_slurm_available()
+            self.is_slurm_cluster = self._verify_slurm_available()
 
-    def _verify_slurm_available(self) -> None:
+    def _verify_slurm_available(self) -> bool:
         """Verify that Slurm commands are available on the system."""
         try:
             subprocess.run(
@@ -33,8 +135,9 @@ class ClusterInfo:
                 stderr=subprocess.PIPE,
                 check=True,
             )
+            return True
         except (subprocess.SubprocessError, FileNotFoundError):
-            raise RuntimeError("Slurm commands are not available on this system")
+            return False
 
     @fs_cache(var_name="SLURM_VERSION")
     def get_slurm_version(self, timeout: int = 60) -> str:
@@ -126,7 +229,7 @@ class ClusterInfo:
             logging.error(f"Failed to get CPU information: {str(e)}")
             raise RuntimeError(f"Failed to get CPU information: {str(e)}")
 
-    def get_gpu_generation_and_count(self):
+    def get_gpu_generation_and_count(self) -> Dict[str, int]:
         """
         Detects the GPU generation and count per server using `sinfo`.
 
@@ -229,7 +332,6 @@ class ClusterInfo:
             raise RuntimeError("Could not find MaxJobTime in scontrol output")
         except (subprocess.SubprocessError, FileNotFoundError) as e:
             raise RuntimeError(f"Failed to get maximum job lifetime: {str(e)}")
-
 
 class AWSClusterInfo:
     def is_aws_cluster(self) -> bool:
