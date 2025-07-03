@@ -3,12 +3,16 @@
 
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
-import shutil
 import subprocess
 import unittest
 from unittest.mock import MagicMock, patch
 
-from clusterscope.cluster_info import AWSClusterInfo, SlurmClusterInfo, UnifiedInfo
+from clusterscope.cluster_info import (
+    AWSClusterInfo,
+    LocalNodeInfo,
+    SlurmClusterInfo,
+    UnifiedInfo,
+)
 
 
 class TestUnifiedInfo(unittest.TestCase):
@@ -16,14 +20,27 @@ class TestUnifiedInfo(unittest.TestCase):
     def test_get_cluster_name(self):
         unified_info = UnifiedInfo()
         unified_info.is_slurm_cluster = False
-        assert unified_info.is_slurm_cluster is False
         self.assertEqual(unified_info.get_cluster_name(), "local-node")
+
+
+class TestLocalNodeInfo(unittest.TestCase):
+    def setUp(self):
+        self.local_node_info = LocalNodeInfo()
+
+    @patch("subprocess.check_output", return_value="1234")
+    def test_get_cpu_count(self, mock_run):
+        self.assertEqual(self.local_node_info.get_cpu_count(), 1234)
+
+    @patch(
+        "subprocess.check_output",
+        return_value="               total        used\nMem:     12345    123\n",
+    )
+    def test_get_mem_per_node(self, mock_run):
+        self.assertEqual(self.local_node_info.get_mem(), 12345)
 
 
 class TestSlurmClusterInfo(unittest.TestCase):
     def setUp(self):
-        if shutil.which("sinfo") is None:
-            self.skipTest("Machine does not have slurm")
         self.cluster_info = SlurmClusterInfo()
 
     @patch("subprocess.run")
@@ -33,6 +50,18 @@ class TestSlurmClusterInfo(unittest.TestCase):
             stdout="ClusterName=test_cluster\nOther=value", returncode=0
         )
         self.assertEqual(self.cluster_info.get_cluster_name(), "test_cluster")
+
+    @patch("subprocess.run")
+    def test_get_cpu_per_node(self, mock_run):
+        # Mock successful cluster name retrieval
+        mock_run.return_value = MagicMock(stdout="128", returncode=0)
+        self.assertEqual(self.cluster_info.get_cpus_per_node(), 128)
+
+    @patch("subprocess.run")
+    def test_get_mem_per_node(self, mock_run):
+        # Mock successful cluster name retrieval
+        mock_run.return_value = MagicMock(stdout="123456+", returncode=0)
+        self.assertEqual(self.cluster_info.get_mem_per_node(), 123456)
 
     @patch("subprocess.run")
     def test_get_max_job_lifetime(self, mock_run):

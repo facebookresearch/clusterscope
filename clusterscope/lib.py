@@ -18,3 +18,11 @@ def slurm_version() -> Tuple[int, ...]:
     slurm_version = unified_info.get_slurm_version()
     version = tuple(int(v) for v in slurm_version.split("."))
     return version
+
+
+def cpus() -> int:
+    return unified_info.get_cpus_per_node()
+
+
+def mem() -> int:
+    return unified_info.get_mem_per_node()

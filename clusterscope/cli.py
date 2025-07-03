@@ -68,7 +68,12 @@ def main():
         elif args.command == "cpus":
             cpus_per_node = unified_info.get_cpus_per_node()
             print("CPU counts per node:")
-            print(format_dict(cpus_per_node))
+            print(cpus_per_node)
+
+        elif args.command == "mem":
+            mem_per_node = unified_info.get_mem_per_node()
+            print("Mem per node:")
+            print(mem_per_node)
 
         elif args.command == "gpus":
             if args.counts:
