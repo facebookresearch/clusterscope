@@ -9,7 +9,7 @@ import json
 import sys
 from typing import Any, Dict
 
-from clusterscope.cluster_info import ClusterInfo
+from clusterscope.cluster_info import UnifiedInfo
 
 
 def format_dict(data: Dict[str, Any]) -> str:
@@ -57,16 +57,16 @@ def main():
         return 1
 
     try:
-        cluster_info = ClusterInfo()
+        unified_info = UnifiedInfo()
 
         if args.command == "info":
-            cluster_name = cluster_info.get_cluster_name()
-            slurm_version = cluster_info.get_slurm_version()
+            cluster_name = unified_info.get_cluster_name()
+            slurm_version = unified_info.get_slurm_version()
             print(f"Cluster Name: {cluster_name}")
             print(f"Slurm Version: {slurm_version}")
 
         elif args.command == "cpus":
-            cpus_per_node = cluster_info.get_cpus_per_node()
+            cpus_per_node = unified_info.get_cpus_per_node()
             print("CPU counts per node:")
             print(format_dict(cpus_per_node))
 
@@ -74,24 +74,24 @@ def main():
             if args.counts:
                 print("TODO: counts by type:")
             else:
-                generations = cluster_info.get_gpu_generation_and_count()
+                generations = unified_info.get_gpu_generation_and_count()
                 print("GPU generations available:")
                 for gen in sorted(generations):
                     print(f"- {gen}")
 
         elif args.command == "check-gpu":
             gpu_type = args.gpu_type
-            has_gpu = cluster_info.has_gpu_type(gpu_type)
+            has_gpu = unified_info.has_gpu_type(gpu_type)
             if has_gpu:
                 print(f"GPU type {gpu_type} is available in the cluster.")
             else:
                 print(f"GPU type {gpu_type} is NOT available in the cluster.")
 
         elif args.command == "aws":
-            is_aws = cluster_info.is_aws_cluster()
+            is_aws = unified_info.is_aws_cluster()
             if is_aws:
                 print("This is an AWS cluster.")
-                nccl_settings = cluster_info.get_aws_nccl_settings()
+                nccl_settings = unified_info.get_aws_nccl_settings()
                 print("\nRecommended NCCL settings:")
                 print(format_dict(nccl_settings))
             else:

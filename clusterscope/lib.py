@@ -5,16 +5,16 @@
 # LICENSE file in the root directory of this source tree.
 from typing import Tuple
 
-from clusterscope.cluster_info import ClusterInfo
+from clusterscope.cluster_info import UnifiedInfo
 
-cluster_info = ClusterInfo()
+unified_info = UnifiedInfo()
 
 
 def cluster() -> str:
-    return cluster_info.get_cluster_name()
+    return unified_info.get_cluster_name()
 
 
 def slurm_version() -> Tuple[int, ...]:
-    slurm_version = cluster_info.get_slurm_version()
+    slurm_version = unified_info.get_slurm_version()
     version = tuple(int(v) for v in slurm_version.split("."))
     return version
