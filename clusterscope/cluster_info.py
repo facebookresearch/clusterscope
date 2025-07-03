@@ -4,7 +4,6 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 import logging
-import re
 import shutil
 import subprocess
 from collections import defaultdict
@@ -36,7 +35,7 @@ class UnifiedInfo:
         Returns:
             str: Slurm version as a string: "24.11.4"
         """
-        if self.slurm_cluster_info.is_slurm_cluster:
+        if self.is_slurm_cluster:
             return self.slurm_cluster_info.get_slurm_version()
         return "0"
 
@@ -46,9 +45,19 @@ class UnifiedInfo:
         Returns:
             int: The number of CPUs per node, assuming all nodes have the same CPU count.
         """
-        if self.slurm_cluster_info.is_slurm_cluster:
+        if self.is_slurm_cluster:
             return self.slurm_cluster_info.get_cpus_per_node()
         return self.local_node_info.get_cpu_count()
+
+    def get_mem_per_node(self) -> int:
+        """Get the minimum memory available per node in the cluster. Returns 0 if not a Slurm cluster.
+
+        Returns:
+            int: The memory per node in the cluster.
+        """
+        if self.is_slurm_cluster:
+            return self.slurm_cluster_info.get_mem_per_node()
+        return self.local_node_info.get_mem()
 
     def get_gpu_generation_and_count(self) -> Dict[str, int]:
         """Get the number of GPUs on the slurm cluster node.
@@ -56,7 +65,7 @@ class UnifiedInfo:
         Returns:
             dict: A dictionary with GPU generation as keys and counts as values.
         """
-        if self.slurm_cluster_info.is_slurm_cluster:
+        if self.is_slurm_cluster:
             return self.slurm_cluster_info.get_gpu_generation_and_count()
         return self.local_node_info.get_gpu_generation_and_count()
 
@@ -86,6 +95,27 @@ class LocalNodeInfo:
             return int(result.strip())
         except (subprocess.SubprocessError, FileNotFoundError) as e:
             raise RuntimeError(f"Failed to get CPU information: {str(e)}")
+
+    @fs_cache(var_name="LOCAL_NODE_MEM")
+    def get_mem(self, timeout: int = 60) -> int:
+        """Get the amount of memory on the local node.
+
+        Returns:
+            int: The amount of memory on the local node.
+
+        Raises:
+            RuntimeError: If unable to retrieve memory information.
+        """
+        try:
+            result = subprocess.check_output(["free", "-m"], text=True, timeout=timeout)
+
+            for line in result.strip().split("\n"):
+                if "Mem:" in line:
+                    parts = line.split()
+                    return int(parts[1])
+            raise RuntimeError("Could not find memory information in free output")
+        except (subprocess.SubprocessError, FileNotFoundError) as e:
+            raise RuntimeError(f"Failed to get memory information: {str(e)}")
 
     def get_gpu_generation_and_count(self, timeout: int = 60) -> Dict[str, int]:
         """Get the number of GPUs on the local node.
@@ -191,8 +221,37 @@ class SlurmClusterInfo:
         except (subprocess.SubprocessError, FileNotFoundError) as e:
             raise RuntimeError(f"Failed to get cluster name: {str(e)}")
 
+    @fs_cache(var_name="SLURM_MEM_PER_NODE")
+    def get_mem_per_node(self) -> int:
+        """Get the minimum memory available per node in the cluster.
+
+        Returns:
+            int: The memory per node in the cluster.
+
+        Raises:
+            RuntimeError: If unable to retrieve node information.
+        """
+        try:
+            result = subprocess.run(
+                ["sinfo", "-o", "%100m", "--noconvert", "--noheader"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=True,
+            )
+
+            logging.debug("Parsing node information...")
+            for line in result.stdout.splitlines():
+                mem = int(line.strip("+ "))
+                return mem
+            raise RuntimeError(f"No mem information found in: {result.stdout}")
+        except (subprocess.SubprocessError, FileNotFoundError) as e:
+            logging.error(f"Failed to get Slurm memory information: {str(e)}")
+            raise RuntimeError(f"Failed to get Slurm memory information: {str(e)}")
+
+    @fs_cache(var_name="SLURM_CPUS_PER_NODE")
     def get_cpus_per_node(self) -> int:
-        """Get the number of CPUs for each node in the cluster.
+        """Get the minimum number of CPUs for each node in the cluster.
 
         Returns:
             int: The number of CPUs per node, assuming all nodes have the same CPU count.
@@ -202,30 +261,18 @@ class SlurmClusterInfo:
         """
         try:
             result = subprocess.run(
-                ["sinfo", "-o", "%c"],
+                ["sinfo", "-o", "%100c", "--noheader"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
                 check=True,
             )
 
-            cpus_per_node = set()
-
             logging.debug("Parsing node information...")
             for line in result.stdout.splitlines():
-                # sinfo -o %c output format: "CPUs\n"
-                match = re.match(r"(\d+)", line)
-                if match:
-                    cpus = int(match.group(1))
-                    cpus_per_node.add(cpus)
-
-            if len(cpus_per_node) > 1:
-                raise RuntimeError(f"Nodes have different CPU counts: {cpus_per_node}")
-            elif not cpus_per_node:
-                raise RuntimeError("No node information found")
-
-            return list(cpus_per_node)[0]
-
+                cpus = int(line.strip("+ "))
+                return cpus
+            raise RuntimeError(f"No CPU information found in: {result.stdout}")
         except (subprocess.SubprocessError, FileNotFoundError) as e:
             logging.error(f"Failed to get CPU information: {str(e)}")
             raise RuntimeError(f"Failed to get CPU information: {str(e)}")
