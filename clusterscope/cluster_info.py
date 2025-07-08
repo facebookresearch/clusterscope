@@ -50,7 +50,7 @@ class UnifiedInfo:
         return self.local_node_info.get_cpu_count()
 
     def get_mem_per_node(self) -> int:
-        """Get the minimum memory available per node in the cluster. Returns 0 if not a Slurm cluster.
+        """Return the smallest amount of mem configured across all nodes in the cluster. Returns 0 if not a Slurm cluster.
 
         Returns:
             int: The memory per node in the cluster.
