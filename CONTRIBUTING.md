@@ -57,7 +57,7 @@ We welcome your pull requests.
 
 ## Release
 
-1. Checkout and pull latest master
+1. Checkout and pull latest main
 ```
 $ git checkout main
 $ git pull origin main
@@ -70,6 +70,7 @@ $ git tag -a v0.0.0 -m "Release 0.0.0"
 ```
 $ git push origin v0.0.0
 ```
+4. [Find the action related to publishing the branch to PyPI](https://github.com/facebookresearch/clusterscope/actions). This requires maintainer approval to run the workflow.
 
 ## Contributor License Agreement ("CLA")
 In order to accept your pull request, we need you to submit a CLA. You only need
