@@ -70,7 +70,9 @@ class UnifiedInfo:
         """
         if self.is_slurm_cluster:
             return self.slurm_cluster_info.get_gpu_generation_and_count()
-        return self.local_node_info.get_gpu_generation_and_count()
+        if self.has_nvidia_gpus:
+            return self.local_node_info.get_gpu_generation_and_count()
+        return {}
 
 
 class DarwinInfo:
