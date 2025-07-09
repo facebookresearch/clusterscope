@@ -22,6 +22,12 @@ class TestUnifiedInfo(unittest.TestCase):
         unified_info.is_slurm_cluster = False
         self.assertEqual(unified_info.get_cluster_name(), "local-node")
 
+    def test_get_gpu_generation_and_count(self):
+        unified_info = UnifiedInfo()
+        unified_info.is_slurm_cluster = False
+        unified_info.has_nvidia_gpus = False
+        self.assertEqual(unified_info.get_gpu_generation_and_count(), {})
+
 
 class TestLocalNodeInfo(unittest.TestCase):
     def setUp(self):

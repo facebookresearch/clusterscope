@@ -17,6 +17,7 @@ class UnifiedInfo:
         self.local_node_info = LocalNodeInfo()
         self.slurm_cluster_info = SlurmClusterInfo()
         self.is_slurm_cluster = self.slurm_cluster_info.verify_slurm_available()
+        self.has_nvidia_gpus = self.local_node_info.has_nvidia_gpus()
         self.aws_cluster_info = AWSClusterInfo()
 
     def get_cluster_name(self) -> str:
@@ -67,7 +68,9 @@ class UnifiedInfo:
         """
         if self.is_slurm_cluster:
             return self.slurm_cluster_info.get_gpu_generation_and_count()
-        return self.local_node_info.get_gpu_generation_and_count()
+        if self.has_nvidia_gpus:
+            return self.local_node_info.get_gpu_generation_and_count()
+        return {}
 
 
 class LocalNodeInfo:
@@ -76,6 +79,19 @@ class LocalNodeInfo:
     This class offers methods to query various aspects of the local node,
     such as CPU and GPU information.
     """
+
+    def has_nvidia_gpus(self) -> bool:
+        """Verify that Slurm commands are available on the system."""
+        try:
+            subprocess.run(
+                ["nvidia-smi"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True,
+            )
+            return True
+        except FileNotFoundError:
+            return False
 
     @fs_cache(var_name="LOCAL_NODE_CPU_COUNT")
     def get_cpu_count(self, timeout: int = 60) -> int:
