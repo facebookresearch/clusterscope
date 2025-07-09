@@ -8,6 +8,7 @@ import platform
 import shutil
 import subprocess
 from collections import defaultdict
+from functools import lru_cache
 from typing import Dict, Set
 
 from clusterscope.cache import fs_cache
@@ -18,6 +19,7 @@ class UnifiedInfo:
         self.local_node_info = LocalNodeInfo()
         self.slurm_cluster_info = SlurmClusterInfo()
         self.is_slurm_cluster = self.slurm_cluster_info.verify_slurm_available()
+        self.has_nvidia_gpus = self.local_node_info.has_nvidia_gpus()
         self.aws_cluster_info = AWSClusterInfo()
 
     def get_cluster_name(self) -> str:
@@ -51,7 +53,7 @@ class UnifiedInfo:
         return self.local_node_info.get_cpu_count()
 
     def get_mem_per_node(self) -> int:
-        """Get the minimum memory available per node in the cluster in MB. Returns 0 if not a Slurm cluster.
+        """Return the lowest amount of mem configured across all nodes in the cluster. Returns 0 if not a Slurm cluster.
 
         Returns:
             int: The memory per node in the cluster.
@@ -128,6 +130,7 @@ class LinuxInfo:
         except (subprocess.SubprocessError, FileNotFoundError) as e:
             raise RuntimeError(f"Failed to get CPU information: {str(e)}")
 
+    @fs_cache(var_name="LOCAL_NODE_MEM")
     def get_mem(self, timeout: int = 60) -> int:
         """Get the amount of memory on the local node.
 
@@ -199,6 +202,7 @@ class LocalNodeInfo:
         Raises:
             RuntimeError: If unable to retrieve GPU information.
         """
+        assert self.has_nvidia_gpus() is True
         try:
             result = subprocess.check_output(
                 ["nvidia-smi", "--query-gpu=gpu_name", "--format=csv,noheader"],
@@ -230,6 +234,7 @@ class SlurmClusterInfo:
         if shutil.which("sinfo") is not None:
             self.is_slurm_cluster = self.verify_slurm_available()
 
+    @lru_cache(maxsize=1)
     def verify_slurm_available(self) -> bool:
         """Verify that Slurm commands are available on the system."""
         try:
@@ -296,7 +301,7 @@ class SlurmClusterInfo:
 
     @fs_cache(var_name="SLURM_MEM_PER_NODE")
     def get_mem_per_node(self) -> int:
-        """Get the minimum memory available per node in the cluster.
+        """Get the lowest memory available per node in the cluster.
 
         Returns:
             int: The memory per node in the cluster.
