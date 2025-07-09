@@ -159,6 +159,20 @@ class LocalNodeInfo:
     such as CPU and GPU information.
     """
 
+    @lru_cache(maxsize=1)
+    def has_nvidia_gpus(self) -> bool:
+        """Verify that nvidia GPU is available on the system."""
+        try:
+            subprocess.run(
+                ["nvidia-smi"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True,
+            )
+            return True
+        except FileNotFoundError:
+            return False
+
     @fs_cache(var_name="LOCAL_NODE_CPU_COUNT")
     def get_cpu_count(self, timeout: int = 60) -> int:
         """Get the number of CPUs on the local node.
