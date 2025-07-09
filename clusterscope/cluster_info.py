@@ -8,6 +8,7 @@ import re
 import shutil
 import subprocess
 from collections import defaultdict
+from functools import lru_cache
 from typing import Dict, Set
 
 from clusterscope.cache import fs_cache
@@ -71,8 +72,9 @@ class LocalNodeInfo:
     such as CPU and GPU information.
     """
 
+    @lru_cache(maxsize=1)
     def has_nvidia_gpus(self) -> bool:
-        """Verify that Slurm commands are available on the system."""
+        """Verify that nvidia GPU is available on the system."""
         try:
             subprocess.run(
                 ["nvidia-smi"],
@@ -112,6 +114,7 @@ class LocalNodeInfo:
         Raises:
             RuntimeError: If unable to retrieve GPU information.
         """
+        assert self.has_nvidia_gpus() is True
         try:
             result = subprocess.check_output(
                 ["nvidia-smi", "--query-gpu=gpu_name", "--format=csv,noheader"],
@@ -143,6 +146,7 @@ class SlurmClusterInfo:
         if shutil.which("sinfo") is not None:
             self.is_slurm_cluster = self.verify_slurm_available()
 
+    @lru_cache(maxsize=1)
     def verify_slurm_available(self) -> bool:
         """Verify that Slurm commands are available on the system."""
         try:
