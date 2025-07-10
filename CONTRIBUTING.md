@@ -70,7 +70,7 @@ $ git tag -a v0.0.0 -m "Release 0.0.0"
 ```
 $ git push origin v0.0.0
 ```
-4. [Find the action related to publishing the branch to PyPI](https://github.com/facebookresearch/clusterscope/actions). This requires maintainer approval to run the workflow.
+4. [Find and run the action related to publishing the branch to PyPI](https://github.com/facebookresearch/clusterscope/actions). This requires maintainer approval.
 
 ## Contributor License Agreement ("CLA")
 In order to accept your pull request, we need you to submit a CLA. You only need
