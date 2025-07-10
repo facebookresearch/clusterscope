@@ -42,8 +42,8 @@ class TestLinuxInfo(unittest.TestCase):
         "subprocess.check_output",
         return_value="               total        used\nMem:     12345    123\n",
     )
-    def test_get_mem_per_node(self, mock_run):
-        self.assertEqual(self.linux_info.get_mem(), 12345)
+    def test_get_mem_per_node_MB(self, mock_run):
+        self.assertEqual(self.linux_info.get_mem_MB(), 12345)
 
 
 class TestDarwinInfo(unittest.TestCase):
@@ -58,8 +58,8 @@ class TestDarwinInfo(unittest.TestCase):
         "subprocess.check_output",
         return_value="34359738368",
     )
-    def test_get_mem_per_node(self, mock_run):
-        self.assertEqual(self.darwin_info.get_mem(), 32768)
+    def test_get_mem_per_node_MB(self, mock_run):
+        self.assertEqual(self.darwin_info.get_mem_MB(), 32768)
 
 
 class TestSlurmClusterInfo(unittest.TestCase):
@@ -81,10 +81,10 @@ class TestSlurmClusterInfo(unittest.TestCase):
         self.assertEqual(self.cluster_info.get_cpus_per_node(), 128)
 
     @patch("subprocess.run")
-    def test_get_mem_per_node(self, mock_run):
+    def test_get_mem_per_node_MB(self, mock_run):
         # Mock successful cluster name retrieval
         mock_run.return_value = MagicMock(stdout="123456+", returncode=0)
-        self.assertEqual(self.cluster_info.get_mem_per_node(), 123456)
+        self.assertEqual(self.cluster_info.get_mem_per_node_MB(), 123456)
 
     @patch("subprocess.run")
     def test_get_max_job_lifetime(self, mock_run):

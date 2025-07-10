@@ -71,8 +71,8 @@ def main():
             print(cpus_per_node)
 
         elif args.command == "mem":
-            mem_per_node = unified_info.get_mem_per_node()
-            print("Mem per node:")
+            mem_per_node = unified_info.get_mem_per_node_MB()
+            print("Mem per node MB:")
             print(mem_per_node)
 
         elif args.command == "gpus":

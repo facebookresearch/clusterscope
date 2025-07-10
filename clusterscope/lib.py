@@ -3,7 +3,7 @@
 
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
-from typing import Tuple
+from typing import Literal, Tuple
 
 from clusterscope.cluster_info import UnifiedInfo
 
@@ -27,6 +27,17 @@ def cpus() -> int:
     return unified_info.get_cpus_per_node()
 
 
-def mem() -> int:
+def mem(
+    to_unit: Literal["MB", "GB"] = "GB",
+) -> int:
     """Get the amount of memory for each node in the cluster. Returns the local memory if not on a cluster."""
-    return unified_info.get_mem_per_node()
+    mem = unified_info.get_mem_per_node_MB()
+    if to_unit == "MB":
+        pass
+    elif to_unit == "GB":
+        mem //= 1000
+    else:
+        raise ValueError(
+            f"{to_unit} is not a supported unit. Currently supported units: MB, GB"
+        )
+    return mem
