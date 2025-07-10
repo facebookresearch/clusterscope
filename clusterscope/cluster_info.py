@@ -203,10 +203,13 @@ class LocalNodeInfo:
         """
         system = platform.system()
         if system == "Linux":
-            return LinuxInfo().get_mem_MB(timeout)
-        if system == "Darwin":
-            return DarwinInfo().get_mem_MB(timeout)
-        raise RuntimeError(f"Unsupported system: {system}")
+            mem = LinuxInfo().get_mem_MB(timeout)
+        elif system == "Darwin":
+            mem = DarwinInfo().get_mem_MB(timeout)
+        else:
+            raise RuntimeError(f"Unsupported system: {system}")
+        assert 0 < mem < 10**12, f"Likely invalid memory: {mem}"
+        return mem
 
     def get_gpu_generation_and_count(self, timeout: int = 60) -> Dict[str, int]:
         """Get the number of GPUs on the local node.
