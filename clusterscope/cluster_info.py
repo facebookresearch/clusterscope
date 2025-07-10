@@ -191,7 +191,7 @@ class LocalNodeInfo:
             return DarwinInfo().get_cpu_count(timeout)
         raise RuntimeError(f"Unsupported system: {system}")
 
-    @fs_cache(var_name="LOCAL_NODE_MEM")
+    @fs_cache(var_name="LOCAL_NODE_MEM_MB")
     def get_mem_MB(self, timeout: int = 60) -> int:
         """Get the amount of memory on the local node.
 
