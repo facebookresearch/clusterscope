@@ -35,9 +35,9 @@ def mem(
     if to_unit == "MB":
         pass
     elif to_unit == "GB":
-        mem /= 1000
+        mem //= 1000
     else:
         raise ValueError(
             f"{to_unit} is not a supported unit. Currently supported units: MB, GB"
         )
-    return int(mem)
+    return mem
