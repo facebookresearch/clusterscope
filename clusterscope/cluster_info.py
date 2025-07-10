@@ -208,7 +208,7 @@ class LocalNodeInfo:
             mem = DarwinInfo().get_mem_MB(timeout)
         else:
             raise RuntimeError(f"Unsupported system: {system}")
-        assert 0 < mem < 10**12, f"Likely invalid memory: {mem}"
+        assert 0 < mem <= 10**12, f"Likely invalid memory: {mem}"
         return mem
 
     def get_gpu_generation_and_count(self, timeout: int = 60) -> Dict[str, int]:
