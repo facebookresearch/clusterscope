@@ -31,7 +31,7 @@ def mem(
     to_unit: Literal["MB", "GB"] = "GB",
 ) -> int:
     """Get the amount of memory for each node in the cluster. Returns the local memory if not on a cluster."""
-    mem = unified_info.get_mem_per_node()
+    mem = unified_info.get_mem_per_node_MB()
     if to_unit == "MB":
         pass
     elif to_unit == "GB":

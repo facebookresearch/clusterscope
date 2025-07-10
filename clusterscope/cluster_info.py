@@ -52,15 +52,15 @@ class UnifiedInfo:
             return self.slurm_cluster_info.get_cpus_per_node()
         return self.local_node_info.get_cpu_count()
 
-    def get_mem_per_node(self) -> int:
+    def get_mem_per_node_MB(self) -> int:
         """Return the lowest amount of mem configured across all nodes in the cluster. Returns 0 if not a Slurm cluster.
 
         Returns:
             int: The memory per node in the cluster.
         """
         if self.is_slurm_cluster:
-            return self.slurm_cluster_info.get_mem_per_node()
-        return self.local_node_info.get_mem()
+            return self.slurm_cluster_info.get_mem_per_node_MB()
+        return self.local_node_info.get_mem_MB()
 
     def get_gpu_generation_and_count(self) -> Dict[str, int]:
         """Get the number of GPUs on the slurm cluster node.
@@ -94,7 +94,7 @@ class DarwinInfo:
         except (subprocess.SubprocessError, FileNotFoundError) as e:
             raise RuntimeError(f"Failed to get CPU information: {str(e)}")
 
-    def get_mem(self, timeout: int = 60) -> int:
+    def get_mem_MB(self, timeout: int = 60) -> int:
         """Get the amount of memory on the local node.
 
         Returns:
@@ -132,8 +132,7 @@ class LinuxInfo:
         except (subprocess.SubprocessError, FileNotFoundError) as e:
             raise RuntimeError(f"Failed to get CPU information: {str(e)}")
 
-    @fs_cache(var_name="LOCAL_NODE_MEM")
-    def get_mem(self, timeout: int = 60) -> int:
+    def get_mem_MB(self, timeout: int = 60) -> int:
         """Get the amount of memory on the local node.
 
         Returns:
@@ -193,7 +192,7 @@ class LocalNodeInfo:
         raise RuntimeError(f"Unsupported system: {system}")
 
     @fs_cache(var_name="LOCAL_NODE_MEM")
-    def get_mem(self, timeout: int = 60) -> int:
+    def get_mem_MB(self, timeout: int = 60) -> int:
         """Get the amount of memory on the local node.
 
         Returns:
@@ -204,9 +203,9 @@ class LocalNodeInfo:
         """
         system = platform.system()
         if system == "Linux":
-            return LinuxInfo().get_mem(timeout)
+            return LinuxInfo().get_mem_MB(timeout)
         if system == "Darwin":
-            return DarwinInfo().get_mem(timeout)
+            return DarwinInfo().get_mem_MB(timeout)
         raise RuntimeError(f"Unsupported system: {system}")
 
     def get_gpu_generation_and_count(self, timeout: int = 60) -> Dict[str, int]:
@@ -315,8 +314,8 @@ class SlurmClusterInfo:
         except (subprocess.SubprocessError, FileNotFoundError) as e:
             raise RuntimeError(f"Failed to get cluster name: {str(e)}")
 
-    @fs_cache(var_name="SLURM_MEM_PER_NODE")
-    def get_mem_per_node(self) -> int:
+    @fs_cache(var_name="SLURM_MEM_PER_NODE_MB")
+    def get_mem_per_node_MB(self) -> int:
         """Get the lowest memory available per node in the cluster.
 
         Returns:
