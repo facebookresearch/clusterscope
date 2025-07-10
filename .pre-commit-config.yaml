@@ -21,3 +21,9 @@ repos:
   hooks:
     - id: black
       args: [--line-length=88]
+- repo: https://github.com/pre-commit/mirrors-mypy
+  rev: v1.11.2
+  hooks:
+    - id: mypy
+      files: ^(clusterscope)/
+      args: ["--install-types", "--non-interactive"]
