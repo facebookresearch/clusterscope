@@ -253,28 +253,28 @@ class SlurmClusterInfo:
         if shutil.which("sinfo") is not None:
             self.is_slurm_cluster = self.verify_slurm_available()
 
+    def verify_slurm_available(self) -> bool:
+        """Verify that Slurm commands are available on the system with retries."""
+        try:
+            self._verify_slurm_available_with_retry()
+            return True
+        except (subprocess.SubprocessError, FileNotFoundError):
+            return False
+
     @tenacity.retry(
         stop=tenacity.stop_after_attempt(3),
         wait=tenacity.wait_exponential(multiplier=1, min=1, max=10),
         retry=tenacity.retry_if_exception_type((subprocess.SubprocessError, FileNotFoundError)),
         reraise=True
     )
-    def _verify_slurm_available_with_retry(self) -> bool:
-        """Internal method that performs the actual Slurm verification with retries."""
+    def _verify_slurm_available_with_retry(self) -> None:
+        """Internal method that performs the actual verification with retries."""
         subprocess.run(
             ["sinfo", "--version"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             check=True,
         )
-        return True
-
-    def verify_slurm_available(self) -> bool:
-        """Verify that Slurm commands are available on the system."""
-        try:
-            return self._verify_slurm_available_with_retry()
-        except (subprocess.SubprocessError, FileNotFoundError):
-            return False
 
     @fs_cache(var_name="SLURM_VERSION")
     def get_slurm_version(self, timeout: int = 60) -> str:

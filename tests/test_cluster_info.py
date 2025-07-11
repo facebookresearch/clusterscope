@@ -198,16 +198,17 @@ class TestSlurmClusterInfo(unittest.TestCase):
         result = gpu_manager.has_gpu_type("V100")
         self.assertTrue(result)
 
+    @patch("shutil.which")
     @patch("subprocess.run")
-    def test_verify_slurm_available_success(self, mock_run):
+    def test_verify_slurm_available_success(self, mock_run, mock_which):
         """Test successful verification of Slurm availability."""
+        mock_which.return_value = "/usr/bin/sinfo"  # sinfo is available
         mock_run.return_value = MagicMock(returncode=0)
 
         cluster_info = SlurmClusterInfo()
-        result = cluster_info.verify_slurm_available()
-        self.assertTrue(result)
+        self.assertTrue(cluster_info.is_slurm_cluster)
 
-        # Verify sinfo --version was called
+        # Verify sinfo --version was called during initialization
         mock_run.assert_called_with(
             ["sinfo", "--version"],
             stdout=subprocess.PIPE,
@@ -215,40 +216,38 @@ class TestSlurmClusterInfo(unittest.TestCase):
             check=True,
         )
 
+    @patch("shutil.which")
     @patch("subprocess.run")
-    def test_verify_slurm_available_subprocess_error(self, mock_run):
+    def test_verify_slurm_available_subprocess_error(self, mock_run, mock_which):
         """Test retry behavior when subprocess fails."""
+        mock_which.return_value = "/usr/bin/sinfo"  # sinfo is available
         # Mock subprocess to raise CalledProcessError (which is a SubprocessError)
         mock_run.side_effect = subprocess.CalledProcessError(1, "sinfo")
 
         cluster_info = SlurmClusterInfo()
-        # Reset call count after __init__ (which also calls verify_slurm_available)
-        mock_run.reset_mock()
+        self.assertFalse(cluster_info.is_slurm_cluster)
 
-        result = cluster_info.verify_slurm_available()
-        self.assertFalse(result)
-
-        # Verify it was called 3 times (retry attempts)
+        # Verify it was called 3 times (retry attempts) during initialization
         self.assertEqual(mock_run.call_count, 3)
 
+    @patch("shutil.which")
     @patch("subprocess.run")
-    def test_verify_slurm_available_file_not_found(self, mock_run):
+    def test_verify_slurm_available_file_not_found(self, mock_run, mock_which):
         """Test retry behavior when sinfo command is not found."""
+        mock_which.return_value = "/usr/bin/sinfo"  # sinfo is available
         mock_run.side_effect = FileNotFoundError("sinfo command not found")
 
         cluster_info = SlurmClusterInfo()
-        # Reset call count after __init__ (which also calls verify_slurm_available)
-        mock_run.reset_mock()
+        self.assertFalse(cluster_info.is_slurm_cluster)
 
-        result = cluster_info.verify_slurm_available()
-        self.assertFalse(result)
-
-        # Verify it was called 3 times (retry attempts)
+        # Verify it was called 3 times (retry attempts) during initialization
         self.assertEqual(mock_run.call_count, 3)
 
+    @patch("shutil.which")
     @patch("subprocess.run")
-    def test_verify_slurm_available_retry_then_success(self, mock_run):
+    def test_verify_slurm_available_retry_then_success(self, mock_run, mock_which):
         """Test that retry succeeds after initial failures."""
+        mock_which.return_value = "/usr/bin/sinfo"  # sinfo is available
         # Mock subprocess to fail twice, then succeed
         call_count = 0
         def side_effect(*args, **kwargs):
@@ -261,15 +260,18 @@ class TestSlurmClusterInfo(unittest.TestCase):
         mock_run.side_effect = side_effect
 
         cluster_info = SlurmClusterInfo()
-        # Reset call count after __init__ (which also calls verify_slurm_available)
-        mock_run.reset_mock()
-        call_count = 0  # Reset our counter too
+        self.assertTrue(cluster_info.is_slurm_cluster)
 
-        result = cluster_info.verify_slurm_available()
-        self.assertTrue(result)
-
-        # Verify it was called 3 times (2 failures + 1 success)
+        # Verify it was called 3 times (2 failures + 1 success) during initialization
         self.assertEqual(mock_run.call_count, 3)
+
+    @patch("shutil.which")
+    def test_verify_slurm_available_sinfo_not_found(self, mock_which):
+        """Test when sinfo command is not available in PATH."""
+        mock_which.return_value = None  # sinfo is not available
+
+        cluster_info = SlurmClusterInfo()
+        self.assertFalse(cluster_info.is_slurm_cluster)
 
     def test_verify_slurm_available_uses_tenacity_retry(self):
         """Test that the internal retry method is decorated with tenacity.retry."""
@@ -285,6 +287,27 @@ class TestSlurmClusterInfo(unittest.TestCase):
         self.assertIsInstance(retry_obj.stop, tenacity.stop.stop_after_attempt)
         # The stop_after_attempt should be configured for 3 attempts
         self.assertEqual(retry_obj.stop.max_attempt_number, 3)
+
+    @patch("shutil.which")
+    @patch("subprocess.run")
+    def test_verify_slurm_available_direct_call(self, mock_run, mock_which):
+        """Test calling verify_slurm_available method directly after initialization."""
+        mock_which.return_value = "/usr/bin/sinfo"  # sinfo is available
+        mock_run.return_value = MagicMock(returncode=0)
+
+        cluster_info = SlurmClusterInfo()
+        mock_run.reset_mock()  # Reset to test direct method call
+
+        result = cluster_info.verify_slurm_available()
+        self.assertTrue(result)
+
+        # Verify sinfo --version was called
+        mock_run.assert_called_with(
+            ["sinfo", "--version"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+        )
 
 
 class TestAWSClusterInfo(unittest.TestCase):
