@@ -7,6 +7,8 @@ import subprocess
 import unittest
 from unittest.mock import MagicMock, patch
 
+import tenacity
+
 from clusterscope.cluster_info import (
     AWSClusterInfo,
     DarwinInfo,
@@ -174,6 +176,94 @@ class TestSlurmClusterInfo(unittest.TestCase):
 
         result = gpu_manager.has_gpu_type("V100")
         self.assertTrue(result)
+
+    @patch("subprocess.run")
+    def test_verify_slurm_available_success(self, mock_run):
+        """Test successful verification of Slurm availability."""
+        mock_run.return_value = MagicMock(returncode=0)
+
+        cluster_info = SlurmClusterInfo()
+        result = cluster_info.verify_slurm_available()
+        self.assertTrue(result)
+
+        # Verify sinfo --version was called
+        mock_run.assert_called_with(
+            ["sinfo", "--version"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+        )
+
+    @patch("subprocess.run")
+    def test_verify_slurm_available_subprocess_error(self, mock_run):
+        """Test retry behavior when subprocess fails."""
+        # Mock subprocess to raise CalledProcessError (which is a SubprocessError)
+        mock_run.side_effect = subprocess.CalledProcessError(1, "sinfo")
+
+        cluster_info = SlurmClusterInfo()
+        # Reset call count after __init__ (which also calls verify_slurm_available)
+        mock_run.reset_mock()
+
+        result = cluster_info.verify_slurm_available()
+        self.assertFalse(result)
+
+        # Verify it was called 3 times (retry attempts)
+        self.assertEqual(mock_run.call_count, 3)
+
+    @patch("subprocess.run")
+    def test_verify_slurm_available_file_not_found(self, mock_run):
+        """Test retry behavior when sinfo command is not found."""
+        mock_run.side_effect = FileNotFoundError("sinfo command not found")
+
+        cluster_info = SlurmClusterInfo()
+        # Reset call count after __init__ (which also calls verify_slurm_available)
+        mock_run.reset_mock()
+
+        result = cluster_info.verify_slurm_available()
+        self.assertFalse(result)
+
+        # Verify it was called 3 times (retry attempts)
+        self.assertEqual(mock_run.call_count, 3)
+
+    @patch("subprocess.run")
+    def test_verify_slurm_available_retry_then_success(self, mock_run):
+        """Test that retry succeeds after initial failures."""
+        # Mock subprocess to fail twice, then succeed
+        call_count = 0
+        def side_effect(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count <= 2:
+                raise subprocess.CalledProcessError(1, "sinfo")
+            return MagicMock(returncode=0)
+
+        mock_run.side_effect = side_effect
+
+        cluster_info = SlurmClusterInfo()
+        # Reset call count after __init__ (which also calls verify_slurm_available)
+        mock_run.reset_mock()
+        call_count = 0  # Reset our counter too
+
+        result = cluster_info.verify_slurm_available()
+        self.assertTrue(result)
+
+        # Verify it was called 3 times (2 failures + 1 success)
+        self.assertEqual(mock_run.call_count, 3)
+
+    def test_verify_slurm_available_uses_tenacity_retry(self):
+        """Test that the internal retry method is decorated with tenacity.retry."""
+        cluster_info = SlurmClusterInfo()
+        method = cluster_info._verify_slurm_available_with_retry
+
+        # Check if the method has retry attributes (indicating tenacity decoration)
+        self.assertTrue(hasattr(method, 'retry'))
+        self.assertIsInstance(method.retry, tenacity.Retrying)
+
+        # Verify retry configuration
+        retry_obj = method.retry
+        self.assertIsInstance(retry_obj.stop, tenacity.stop.stop_after_attempt)
+        # The stop_after_attempt should be configured for 3 attempts
+        self.assertEqual(retry_obj.stop.max_attempt_number, 3)
 
 
 class TestAWSClusterInfo(unittest.TestCase):

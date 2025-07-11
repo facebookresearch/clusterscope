@@ -255,19 +255,24 @@ class SlurmClusterInfo:
 
     @tenacity.retry(
         stop=tenacity.stop_after_attempt(3),
-        wait=tenacity.wait_exponential(multiplier=1, min=1, max=10)
+        wait=tenacity.wait_exponential(multiplier=1, min=1, max=10),
+        retry=tenacity.retry_if_exception_type((subprocess.SubprocessError, FileNotFoundError)),
+        reraise=True
     )
-    @lru_cache(maxsize=1)
+    def _verify_slurm_available_with_retry(self) -> bool:
+        """Internal method that performs the actual Slurm verification with retries."""
+        subprocess.run(
+            ["sinfo", "--version"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+        )
+        return True
+
     def verify_slurm_available(self) -> bool:
         """Verify that Slurm commands are available on the system."""
         try:
-            subprocess.run(
-                ["sinfo", "--version"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                check=True,
-            )
-            return True
+            return self._verify_slurm_available_with_retry()
         except (subprocess.SubprocessError, FileNotFoundError):
             return False
 
