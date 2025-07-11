@@ -7,6 +7,8 @@ import subprocess
 import unittest
 from unittest.mock import MagicMock, patch
 
+import tenacity
+
 from clusterscope.cluster_info import (
     AWSClusterInfo,
     DarwinInfo,
@@ -63,28 +65,45 @@ class TestDarwinInfo(unittest.TestCase):
 
 
 class TestSlurmClusterInfo(unittest.TestCase):
-    def setUp(self):
-        self.cluster_info = SlurmClusterInfo()
-
+    @patch("clusterscope.cache.load")
+    @patch("clusterscope.cache.save")
     @patch("subprocess.run")
-    def test_get_cluster_name(self, mock_run):
-        # Mock successful cluster name retrieval
-        mock_run.return_value = MagicMock(
-            stdout="ClusterName=test_cluster\nOther=value", returncode=0
-        )
-        self.assertEqual(self.cluster_info.get_cluster_name(), "test_cluster")
+    def test_get_cluster_name(self, mock_run, mock_save, mock_load):
+        # Mock cache to return empty dict (no cached values)
+        mock_load.return_value = {}
+        mock_save.return_value = None
+
+        # Mock different subprocess calls
+        def mock_subprocess_run(*args, **kwargs):
+            command = args[0]
+            if command == ["sinfo", "--version"]:
+                # Mock sinfo --version for verify_slurm_available
+                return MagicMock(returncode=0)
+            elif command == ["scontrol", "show", "config"]:
+                # Mock scontrol show config for get_cluster_name
+                return MagicMock(
+                    stdout="ClusterName=test_cluster\nOther=value", returncode=0
+                )
+            else:
+                return MagicMock(returncode=0)
+
+        mock_run.side_effect = mock_subprocess_run
+        cluster_info = SlurmClusterInfo()
+        self.assertEqual(cluster_info.get_cluster_name(), "test_cluster")
 
     @patch("subprocess.run")
     def test_get_cpu_per_node(self, mock_run):
         # Mock successful cluster name retrieval
         mock_run.return_value = MagicMock(stdout="128", returncode=0)
-        self.assertEqual(self.cluster_info.get_cpus_per_node(), 128)
+        cluster_info = SlurmClusterInfo()
+        self.assertEqual(cluster_info.get_cpus_per_node(), 128)
 
     @patch("subprocess.run")
     def test_get_mem_per_node_MB(self, mock_run):
         # Mock successful cluster name retrieval
         mock_run.return_value = MagicMock(stdout="123456+", returncode=0)
-        self.assertEqual(self.cluster_info.get_mem_per_node_MB(), 123456)
+        cluster_info = SlurmClusterInfo()
+        self.assertEqual(cluster_info.get_mem_per_node_MB(), 123456)
 
     @patch("subprocess.run")
     def test_get_max_job_lifetime(self, mock_run):
@@ -92,17 +111,20 @@ class TestSlurmClusterInfo(unittest.TestCase):
         mock_run.return_value = MagicMock(
             stdout="MaxJobTime=1-00:00:00\nOther=value", returncode=0
         )
-        self.assertEqual(self.cluster_info.get_max_job_lifetime(), "1-00:00:00")
+        cluster_info = SlurmClusterInfo()
+        self.assertEqual(cluster_info.get_max_job_lifetime(), "1-00:00:00")
 
     @patch("subprocess.run")
     def test_get_max_job_lifetime_error(self, mock_run):
         # Mock failed command
         mock_run.side_effect = subprocess.SubprocessError()
+        cluster_info = SlurmClusterInfo()
         with self.assertRaises(RuntimeError):
-            self.cluster_info.get_max_job_lifetime()
+            cluster_info.get_max_job_lifetime()
         mock_run.side_effect = FileNotFoundError()
+        cluster_info2 = SlurmClusterInfo()
         with self.assertRaises(RuntimeError):
-            self.cluster_info.get_max_job_lifetime()
+            cluster_info2.get_max_job_lifetime()
 
     @patch("subprocess.run")
     def test_get_max_job_lifetime_not_found(self, mock_run):
@@ -110,8 +132,9 @@ class TestSlurmClusterInfo(unittest.TestCase):
         mock_run.return_value = MagicMock(
             stdout="SomeOtherSetting=value\nAnotherSetting=value", returncode=0
         )
+        cluster_info = SlurmClusterInfo()
         with self.assertRaises(RuntimeError):
-            self.cluster_info.get_max_job_lifetime()
+            cluster_info.get_max_job_lifetime()
 
     @patch("subprocess.run")
     def test_get_gpu_generations(self, mock_run):
@@ -174,6 +197,117 @@ class TestSlurmClusterInfo(unittest.TestCase):
 
         result = gpu_manager.has_gpu_type("V100")
         self.assertTrue(result)
+
+    @patch("shutil.which")
+    @patch("subprocess.run")
+    def test_verify_slurm_available_success(self, mock_run, mock_which):
+        """Test successful verification of Slurm availability."""
+        mock_which.return_value = "/usr/bin/sinfo"  # sinfo is available
+        mock_run.return_value = MagicMock(returncode=0)
+
+        cluster_info = SlurmClusterInfo()
+        self.assertTrue(cluster_info.is_slurm_cluster)
+
+        # Verify sinfo --version was called during initialization
+        mock_run.assert_called_with(
+            ["sinfo", "--version"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+        )
+
+    @patch("shutil.which")
+    @patch("subprocess.run")
+    def test_verify_slurm_available_subprocess_error(self, mock_run, mock_which):
+        """Test retry behavior when subprocess fails."""
+        mock_which.return_value = "/usr/bin/sinfo"  # sinfo is available
+        # Mock subprocess to raise CalledProcessError (which is a SubprocessError)
+        mock_run.side_effect = subprocess.CalledProcessError(1, "sinfo")
+
+        cluster_info = SlurmClusterInfo()
+        self.assertFalse(cluster_info.is_slurm_cluster)
+
+        # Verify it was called 3 times (retry attempts) during initialization
+        self.assertEqual(mock_run.call_count, 3)
+
+    @patch("shutil.which")
+    @patch("subprocess.run")
+    def test_verify_slurm_available_file_not_found(self, mock_run, mock_which):
+        """Test retry behavior when sinfo command is not found."""
+        mock_which.return_value = "/usr/bin/sinfo"  # sinfo is available
+        mock_run.side_effect = FileNotFoundError("sinfo command not found")
+
+        cluster_info = SlurmClusterInfo()
+        self.assertFalse(cluster_info.is_slurm_cluster)
+
+        # Verify it was called 3 times (retry attempts) during initialization
+        self.assertEqual(mock_run.call_count, 3)
+
+    @patch("shutil.which")
+    @patch("subprocess.run")
+    def test_verify_slurm_available_retry_then_success(self, mock_run, mock_which):
+        """Test that retry succeeds after initial failures."""
+        mock_which.return_value = "/usr/bin/sinfo"  # sinfo is available
+        # Mock subprocess to fail twice, then succeed
+        call_count = 0
+        def side_effect(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count <= 2:
+                raise subprocess.CalledProcessError(1, "sinfo")
+            return MagicMock(returncode=0)
+
+        mock_run.side_effect = side_effect
+
+        cluster_info = SlurmClusterInfo()
+        self.assertTrue(cluster_info.is_slurm_cluster)
+
+        # Verify it was called 3 times (2 failures + 1 success) during initialization
+        self.assertEqual(mock_run.call_count, 3)
+
+    @patch("shutil.which")
+    def test_verify_slurm_available_sinfo_not_found(self, mock_which):
+        """Test when sinfo command is not available in PATH."""
+        mock_which.return_value = None  # sinfo is not available
+
+        cluster_info = SlurmClusterInfo()
+        self.assertFalse(cluster_info.is_slurm_cluster)
+
+    def test_verify_slurm_available_uses_tenacity_retry(self):
+        """Test that the internal retry method is decorated with tenacity.retry."""
+        cluster_info = SlurmClusterInfo()
+        method = cluster_info._verify_slurm_available_with_retry
+
+        # Check if the method has retry attributes (indicating tenacity decoration)
+        self.assertTrue(hasattr(method, 'retry'))
+        self.assertIsInstance(method.retry, tenacity.Retrying)
+
+        # Verify retry configuration
+        retry_obj = method.retry
+        self.assertIsInstance(retry_obj.stop, tenacity.stop.stop_after_attempt)
+        # The stop_after_attempt should be configured for 3 attempts
+        self.assertEqual(retry_obj.stop.max_attempt_number, 3)
+
+    @patch("shutil.which")
+    @patch("subprocess.run")
+    def test_verify_slurm_available_direct_call(self, mock_run, mock_which):
+        """Test calling verify_slurm_available method directly after initialization."""
+        mock_which.return_value = "/usr/bin/sinfo"  # sinfo is available
+        mock_run.return_value = MagicMock(returncode=0)
+
+        cluster_info = SlurmClusterInfo()
+        mock_run.reset_mock()  # Reset to test direct method call
+
+        result = cluster_info.verify_slurm_available()
+        self.assertTrue(result)
+
+        # Verify sinfo --version was called
+        mock_run.assert_called_with(
+            ["sinfo", "--version"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+        )
 
 
 class TestAWSClusterInfo(unittest.TestCase):
