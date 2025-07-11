@@ -65,28 +65,45 @@ class TestDarwinInfo(unittest.TestCase):
 
 
 class TestSlurmClusterInfo(unittest.TestCase):
-    def setUp(self):
-        self.cluster_info = SlurmClusterInfo()
-
+    @patch("clusterscope.cache.load")
+    @patch("clusterscope.cache.save")
     @patch("subprocess.run")
-    def test_get_cluster_name(self, mock_run):
-        # Mock successful cluster name retrieval
-        mock_run.return_value = MagicMock(
-            stdout="ClusterName=test_cluster\nOther=value", returncode=0
-        )
-        self.assertEqual(self.cluster_info.get_cluster_name(), "test_cluster")
+    def test_get_cluster_name(self, mock_run, mock_save, mock_load):
+        # Mock cache to return empty dict (no cached values)
+        mock_load.return_value = {}
+        mock_save.return_value = None
+
+        # Mock different subprocess calls
+        def mock_subprocess_run(*args, **kwargs):
+            command = args[0]
+            if command == ["sinfo", "--version"]:
+                # Mock sinfo --version for verify_slurm_available
+                return MagicMock(returncode=0)
+            elif command == ["scontrol", "show", "config"]:
+                # Mock scontrol show config for get_cluster_name
+                return MagicMock(
+                    stdout="ClusterName=test_cluster\nOther=value", returncode=0
+                )
+            else:
+                return MagicMock(returncode=0)
+
+        mock_run.side_effect = mock_subprocess_run
+        cluster_info = SlurmClusterInfo()
+        self.assertEqual(cluster_info.get_cluster_name(), "test_cluster")
 
     @patch("subprocess.run")
     def test_get_cpu_per_node(self, mock_run):
         # Mock successful cluster name retrieval
         mock_run.return_value = MagicMock(stdout="128", returncode=0)
-        self.assertEqual(self.cluster_info.get_cpus_per_node(), 128)
+        cluster_info = SlurmClusterInfo()
+        self.assertEqual(cluster_info.get_cpus_per_node(), 128)
 
     @patch("subprocess.run")
     def test_get_mem_per_node_MB(self, mock_run):
         # Mock successful cluster name retrieval
         mock_run.return_value = MagicMock(stdout="123456+", returncode=0)
-        self.assertEqual(self.cluster_info.get_mem_per_node_MB(), 123456)
+        cluster_info = SlurmClusterInfo()
+        self.assertEqual(cluster_info.get_mem_per_node_MB(), 123456)
 
     @patch("subprocess.run")
     def test_get_max_job_lifetime(self, mock_run):
@@ -94,17 +111,20 @@ class TestSlurmClusterInfo(unittest.TestCase):
         mock_run.return_value = MagicMock(
             stdout="MaxJobTime=1-00:00:00\nOther=value", returncode=0
         )
-        self.assertEqual(self.cluster_info.get_max_job_lifetime(), "1-00:00:00")
+        cluster_info = SlurmClusterInfo()
+        self.assertEqual(cluster_info.get_max_job_lifetime(), "1-00:00:00")
 
     @patch("subprocess.run")
     def test_get_max_job_lifetime_error(self, mock_run):
         # Mock failed command
         mock_run.side_effect = subprocess.SubprocessError()
+        cluster_info = SlurmClusterInfo()
         with self.assertRaises(RuntimeError):
-            self.cluster_info.get_max_job_lifetime()
+            cluster_info.get_max_job_lifetime()
         mock_run.side_effect = FileNotFoundError()
+        cluster_info2 = SlurmClusterInfo()
         with self.assertRaises(RuntimeError):
-            self.cluster_info.get_max_job_lifetime()
+            cluster_info2.get_max_job_lifetime()
 
     @patch("subprocess.run")
     def test_get_max_job_lifetime_not_found(self, mock_run):
@@ -112,8 +132,9 @@ class TestSlurmClusterInfo(unittest.TestCase):
         mock_run.return_value = MagicMock(
             stdout="SomeOtherSetting=value\nAnotherSetting=value", returncode=0
         )
+        cluster_info = SlurmClusterInfo()
         with self.assertRaises(RuntimeError):
-            self.cluster_info.get_max_job_lifetime()
+            cluster_info.get_max_job_lifetime()
 
     @patch("subprocess.run")
     def test_get_gpu_generations(self, mock_run):
