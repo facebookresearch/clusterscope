@@ -11,6 +11,7 @@ from collections import defaultdict
 from functools import lru_cache
 from typing import Dict, Set
 
+import tenacity
 from clusterscope.cache import fs_cache
 
 
@@ -252,6 +253,10 @@ class SlurmClusterInfo:
         if shutil.which("sinfo") is not None:
             self.is_slurm_cluster = self.verify_slurm_available()
 
+    @tenacity.retry(
+        stop=tenacity.stop_after_attempt(3),
+        wait=tenacity.wait_exponential(multiplier=1, min=1, max=10)
+    )
     @lru_cache(maxsize=1)
     def verify_slurm_available(self) -> bool:
         """Verify that Slurm commands are available on the system."""
@@ -409,7 +414,7 @@ class SlurmClusterInfo:
         """Get the set of GPU generations available in the cluster.
 
         Returns:
-            Set[str]: A set of GPU generation names (e.g., {"A100", "V100", "P100"})
+            Set[str]: A set of GPU generation names (e.g., {"A100", "H100", "B100"})
 
         Raises:
             RuntimeError: If unable to retrieve GPU information.
