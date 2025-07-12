@@ -9,9 +9,55 @@ import shutil
 import subprocess
 from collections import defaultdict
 from functools import lru_cache
-from typing import Dict, Set
+from typing import Dict, List, Set, Union
 
 from clusterscope.cache import fs_cache
+
+
+def run_cli(
+    cmd: List[str],
+    text: bool = True,
+    timeout: int = 60,
+    stderr: Union[int, None] = None
+) -> str:
+    """
+    Run a CLI command after verifying it's available.
+
+    Args:
+        cmd: List of command and arguments
+        text: Whether to return text output (default: True)
+        timeout: Command timeout in seconds (default: 60)
+        stderr: How to handle stderr (default: None)
+
+    Returns:
+        str: Command output
+
+    Raises:
+        RuntimeError: If command is not available or execution fails
+    """
+    if not cmd:
+        raise RuntimeError("Command list cannot be empty")
+
+    command_name = cmd[0]
+
+    # Check if command is available
+    if shutil.which(command_name) is None:
+        raise RuntimeError(f"Command '{command_name}' is not available on this system")
+
+    try:
+        result = subprocess.check_output(
+            cmd,
+            text=text,
+            timeout=timeout,
+            stderr=stderr
+        )
+        return result
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(f"Command '{' '.join(cmd)}' failed with return code {e.returncode}: {e.output}")
+    except subprocess.TimeoutExpired as e:
+        raise RuntimeError(f"Command '{' '.join(cmd)}' timed out after {timeout} seconds")
+    except (subprocess.SubprocessError, FileNotFoundError) as e:
+        raise RuntimeError(f"Failed to execute command '{' '.join(cmd)}': {str(e)}")
 
 
 class UnifiedInfo:
@@ -86,12 +132,9 @@ class DarwinInfo:
             RuntimeError: If unable to retrieve CPU information.
         """
         try:
-            result = subprocess.check_output(
-                ["sysctl", "-n", "hw.ncpu"], text=True, timeout=timeout
-            )
-
+            result = run_cli(["sysctl", "-n", "hw.ncpu"], text=True, timeout=timeout)
             return int(result.strip())
-        except (subprocess.SubprocessError, FileNotFoundError) as e:
+        except RuntimeError as e:
             raise RuntimeError(f"Failed to get CPU information: {str(e)}")
 
     def get_mem_MB(self, timeout: int = 60) -> int:
@@ -104,12 +147,9 @@ class DarwinInfo:
             RuntimeError: If unable to retrieve memory information.
         """
         try:
-            result = subprocess.check_output(
-                ["sysctl", "-n", "hw.memsize"], text=True, timeout=timeout
-            )
-
+            result = run_cli(["sysctl", "-n", "hw.memsize"], text=True, timeout=timeout)
             return int(result.strip()) // 1024 // 1024
-        except (subprocess.SubprocessError, FileNotFoundError) as e:
+        except RuntimeError as e:
             raise RuntimeError(f"Failed to get memory information: {str(e)}")
 
 
@@ -124,12 +164,9 @@ class LinuxInfo:
             RuntimeError: If unable to retrieve CPU information.
         """
         try:
-            result = subprocess.check_output(
-                ["nproc", "--all"], text=True, timeout=timeout
-            )
-
+            result = run_cli(["nproc", "--all"], text=True, timeout=timeout)
             return int(result.strip())
-        except (subprocess.SubprocessError, FileNotFoundError) as e:
+        except RuntimeError as e:
             raise RuntimeError(f"Failed to get CPU information: {str(e)}")
 
     def get_mem_MB(self, timeout: int = 60) -> int:
@@ -142,14 +179,13 @@ class LinuxInfo:
             RuntimeError: If unable to retrieve memory information.
         """
         try:
-            result = subprocess.check_output(["free", "-m"], text=True, timeout=timeout)
-
+            result = run_cli(["free", "-m"], text=True, timeout=timeout)
             for line in result.strip().split("\n"):
                 if "Mem:" in line:
                     parts = line.split()
                     return int(parts[1])
             raise RuntimeError("Could not find memory information in free output")
-        except (subprocess.SubprocessError, FileNotFoundError) as e:
+        except RuntimeError as e:
             raise RuntimeError(f"Failed to get memory information: {str(e)}")
 
 
@@ -222,7 +258,7 @@ class LocalNodeInfo:
         """
         assert self.has_nvidia_gpus() is True
         try:
-            result = subprocess.check_output(
+            result = run_cli(
                 ["nvidia-smi", "--query-gpu=gpu_name", "--format=csv,noheader"],
                 text=True,
                 timeout=timeout,
@@ -235,7 +271,7 @@ class LocalNodeInfo:
                 gpu_info[gpu_gen] += 1
             return gpu_info
 
-        except (subprocess.SubprocessError, FileNotFoundError) as e:
+        except RuntimeError as e:
             raise RuntimeError(f"Failed to get GPU information: {str(e)}")
 
 
@@ -282,12 +318,9 @@ class SlurmClusterInfo:
             RuntimeError: If unable to retrieve cluster information.
         """
         try:
-            slurm_version = subprocess.check_output(
-                ["sinfo", "-V"], text=True, timeout=timeout
-            )
-
+            slurm_version = run_cli(["sinfo", "-V"], text=True, timeout=timeout)
             return str(slurm_version.strip().split(" ")[1])
-        except (subprocess.SubprocessError, FileNotFoundError) as e:
+        except RuntimeError as e:
             raise RuntimeError(f"Failed to get slurm version: {str(e)}")
 
     @fs_cache(var_name="SLURM_CLUSTER_NAME")
