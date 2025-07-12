@@ -34,12 +34,12 @@ class TestLinuxInfo(unittest.TestCase):
     def setUp(self):
         self.linux_info = LinuxInfo()
 
-    @patch("subprocess.check_output", return_value="1234")
+    @patch("clusterscope.cluster_info.run_cli", return_value="1234")
     def test_get_cpu_count(self, mock_run):
         self.assertEqual(self.linux_info.get_cpu_count(), 1234)
 
     @patch(
-        "subprocess.check_output",
+        "clusterscope.cluster_info.run_cli",
         return_value="               total        used\nMem:     12345    123\n",
     )
     def test_get_mem_per_node_MB(self, mock_run):
@@ -50,12 +50,12 @@ class TestDarwinInfo(unittest.TestCase):
     def setUp(self):
         self.darwin_info = DarwinInfo()
 
-    @patch("subprocess.check_output", return_value="10")
+    @patch("clusterscope.cluster_info.run_cli", return_value="10")
     def test_get_cpu_count(self, mock_run):
         self.assertEqual(self.darwin_info.get_cpu_count(), 10)
 
     @patch(
-        "subprocess.check_output",
+        "clusterscope.cluster_info.run_cli",
         return_value="34359738368",
     )
     def test_get_mem_per_node_MB(self, mock_run):
