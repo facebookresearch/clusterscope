@@ -13,6 +13,7 @@ from clusterscope.cluster_info import (
     LinuxInfo,
     SlurmClusterInfo,
     UnifiedInfo,
+    run_cli,
 )
 
 
@@ -174,6 +175,116 @@ class TestSlurmClusterInfo(unittest.TestCase):
 
         result = gpu_manager.has_gpu_type("V100")
         self.assertTrue(result)
+
+
+class TestRunCli(unittest.TestCase):
+    """Test cases for the run_cli function."""
+
+    def test_run_cli_empty_command(self):
+        """Test that run_cli raises RuntimeError for empty command list."""
+        with self.assertRaises(RuntimeError) as context:
+            run_cli([])
+        self.assertIn("Command list cannot be empty", str(context.exception))
+
+    @patch("shutil.which")
+    def test_run_cli_command_not_available(self, mock_which):
+        """Test that run_cli raises RuntimeError when command is not available."""
+        mock_which.return_value = None
+
+        with self.assertRaises(RuntimeError) as context:
+            run_cli(["nonexistent_command"])
+        self.assertIn("Command 'nonexistent_command' is not available", str(context.exception))
+
+    @patch("shutil.which")
+    @patch("subprocess.check_output")
+    def test_run_cli_successful_execution(self, mock_check_output, mock_which):
+        """Test successful command execution."""
+        mock_which.return_value = "/usr/bin/echo"
+        mock_check_output.return_value = "Hello World\n"
+
+        result = run_cli(["echo", "Hello World"])
+        self.assertEqual(result, "Hello World\n")
+        mock_check_output.assert_called_once_with(
+            ["echo", "Hello World"],
+            text=True,
+            timeout=60,
+            stderr=None
+        )
+
+    @patch("shutil.which")
+    @patch("subprocess.check_output")
+    def test_run_cli_with_custom_parameters(self, mock_check_output, mock_which):
+        """Test run_cli with custom text, timeout, and stderr parameters."""
+        mock_which.return_value = "/usr/bin/echo"
+        mock_check_output.return_value = b"Binary output"
+
+        result = run_cli(["echo", "test"], text=False, timeout=30, stderr=subprocess.STDOUT)
+        self.assertEqual(result, b"Binary output")
+        mock_check_output.assert_called_once_with(
+            ["echo", "test"],
+            text=False,
+            timeout=30,
+            stderr=subprocess.STDOUT
+        )
+
+    @patch("shutil.which")
+    @patch("subprocess.check_output")
+    def test_run_cli_called_process_error(self, mock_check_output, mock_which):
+        """Test that run_cli handles CalledProcessError properly."""
+        mock_which.return_value = "/usr/bin/false"
+        mock_check_output.side_effect = subprocess.CalledProcessError(
+            returncode=1, cmd=["false"], output="Command failed"
+        )
+
+        with self.assertRaises(RuntimeError) as context:
+            run_cli(["false"])
+        self.assertIn("Command 'false' failed with return code 1", str(context.exception))
+
+    @patch("shutil.which")
+    @patch("subprocess.check_output")
+    def test_run_cli_timeout_expired(self, mock_check_output, mock_which):
+        """Test that run_cli handles TimeoutExpired properly."""
+        mock_which.return_value = "/usr/bin/sleep"
+        mock_check_output.side_effect = subprocess.TimeoutExpired(
+            cmd=["sleep", "10"], timeout=1
+        )
+
+        with self.assertRaises(RuntimeError) as context:
+            run_cli(["sleep", "10"], timeout=1)
+        self.assertIn("Command 'sleep 10' timed out after 1 seconds", str(context.exception))
+
+    @patch("shutil.which")
+    @patch("subprocess.check_output")
+    def test_run_cli_subprocess_error(self, mock_check_output, mock_which):
+        """Test that run_cli handles SubprocessError properly."""
+        mock_which.return_value = "/usr/bin/echo"
+        mock_check_output.side_effect = subprocess.SubprocessError("Generic subprocess error")
+
+        with self.assertRaises(RuntimeError) as context:
+            run_cli(["echo", "test"])
+        self.assertIn("Failed to execute command 'echo test'", str(context.exception))
+
+    @patch("shutil.which")
+    @patch("subprocess.check_output")
+    def test_run_cli_file_not_found_error(self, mock_check_output, mock_which):
+        """Test that run_cli handles FileNotFoundError properly."""
+        mock_which.return_value = "/usr/bin/echo"
+        mock_check_output.side_effect = FileNotFoundError("File not found")
+
+        with self.assertRaises(RuntimeError) as context:
+            run_cli(["echo", "test"])
+        self.assertIn("Failed to execute command 'echo test'", str(context.exception))
+
+    @patch("shutil.which")
+    @patch("subprocess.check_output")
+    def test_run_cli_real_command_integration(self, mock_check_output, mock_which):
+        """Integration test with a real command that should exist on most systems."""
+        # Test with 'echo' command which should be available on most systems
+        mock_which.return_value = "/bin/echo"
+        mock_check_output.return_value = "integration test\n"
+
+        result = run_cli(["echo", "integration test"])
+        self.assertEqual(result, "integration test\n")
 
 
 class TestAWSClusterInfo(unittest.TestCase):
