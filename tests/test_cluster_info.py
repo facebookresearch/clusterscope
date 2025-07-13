@@ -11,6 +11,7 @@ from clusterscope.cluster_info import (
     AWSClusterInfo,
     DarwinInfo,
     LinuxInfo,
+    LocalNodeInfo,
     SlurmClusterInfo,
     UnifiedInfo,
     run_cli,
@@ -285,6 +286,285 @@ class TestRunCli(unittest.TestCase):
 
         result = run_cli(["echo", "integration test"])
         self.assertEqual(result, "integration test\n")
+
+
+class TestLocalNodeInfo(unittest.TestCase):
+    """Test cases for LocalNodeInfo class, including AMD GPU support."""
+
+    def setUp(self):
+        self.local_node_info = LocalNodeInfo()
+
+    @patch("subprocess.run")
+    def test_has_nvidia_gpus_true(self, mock_run):
+        """Test has_nvidia_gpus returns True when nvidia-smi is available."""
+        mock_run.return_value = MagicMock(returncode=0)
+        self.assertTrue(self.local_node_info.has_nvidia_gpus())
+
+    @patch("subprocess.run")
+    def test_has_nvidia_gpus_false_file_not_found(self, mock_run):
+        """Test has_nvidia_gpus returns False when nvidia-smi is not found."""
+        mock_run.side_effect = FileNotFoundError()
+        self.assertFalse(self.local_node_info.has_nvidia_gpus())
+
+    @patch("subprocess.run")
+    def test_has_nvidia_gpus_false_called_process_error(self, mock_run):
+        """Test has_nvidia_gpus returns False when nvidia-smi fails."""
+        mock_run.side_effect = subprocess.CalledProcessError(1, ["nvidia-smi"])
+        self.assertFalse(self.local_node_info.has_nvidia_gpus())
+
+    @patch("subprocess.run")
+    def test_has_amd_gpus_true(self, mock_run):
+        """Test has_amd_gpus returns True when rocm-smi is available."""
+        mock_run.return_value = MagicMock(returncode=0)
+        self.assertTrue(self.local_node_info.has_amd_gpus())
+
+    @patch("subprocess.run")
+    def test_has_amd_gpus_false_file_not_found(self, mock_run):
+        """Test has_amd_gpus returns False when rocm-smi is not found."""
+        mock_run.side_effect = FileNotFoundError()
+        self.assertFalse(self.local_node_info.has_amd_gpus())
+
+    @patch("subprocess.run")
+    def test_has_amd_gpus_false_called_process_error(self, mock_run):
+        """Test has_amd_gpus returns False when rocm-smi fails."""
+        mock_run.side_effect = subprocess.CalledProcessError(1, ["rocm-smi"])
+        self.assertFalse(self.local_node_info.has_amd_gpus())
+
+    @patch.object(LocalNodeInfo, "has_nvidia_gpus")
+    @patch.object(LocalNodeInfo, "has_amd_gpus")
+    def test_get_gpu_vendor_nvidia(self, mock_has_amd, mock_has_nvidia):
+        """Test get_gpu_vendor returns 'nvidia' when NVIDIA GPUs are present."""
+        mock_has_nvidia.return_value = True
+        mock_has_amd.return_value = False
+        self.assertEqual(self.local_node_info.get_gpu_vendor(), 'nvidia')
+
+    @patch.object(LocalNodeInfo, "has_nvidia_gpus")
+    @patch.object(LocalNodeInfo, "has_amd_gpus")
+    def test_get_gpu_vendor_amd(self, mock_has_amd, mock_has_nvidia):
+        """Test get_gpu_vendor returns 'amd' when AMD GPUs are present."""
+        mock_has_nvidia.return_value = False
+        mock_has_amd.return_value = True
+        self.assertEqual(self.local_node_info.get_gpu_vendor(), 'amd')
+
+    @patch.object(LocalNodeInfo, "has_nvidia_gpus")
+    @patch.object(LocalNodeInfo, "has_amd_gpus")
+    def test_get_gpu_vendor_none(self, mock_has_amd, mock_has_nvidia):
+        """Test get_gpu_vendor returns 'none' when no GPUs are present."""
+        mock_has_nvidia.return_value = False
+        mock_has_amd.return_value = False
+        self.assertEqual(self.local_node_info.get_gpu_vendor(), 'none')
+
+    @patch.object(LocalNodeInfo, "has_nvidia_gpus")
+    @patch.object(LocalNodeInfo, "has_amd_gpus")
+    def test_get_gpu_vendor_nvidia_priority(self, mock_has_amd, mock_has_nvidia):
+        """Test get_gpu_vendor returns 'nvidia' when both GPU types are present (NVIDIA has priority)."""
+        mock_has_nvidia.return_value = True
+        mock_has_amd.return_value = True
+        self.assertEqual(self.local_node_info.get_gpu_vendor(), 'nvidia')
+
+    @patch("clusterscope.cluster_info.run_cli")
+    def test_get_nvidia_gpu_info_success(self, mock_run_cli):
+        """Test successful NVIDIA GPU information retrieval."""
+        mock_run_cli.return_value = "NVIDIA A100-SXM4-40GB\nNVIDIA A100-SXM4-40GB\nTesla V100-SXM2-16GB"
+        
+        result = self.local_node_info.get_nvidia_gpu_info()
+        expected = {"A100": 2, "V100": 1}
+        self.assertEqual(result, expected)
+
+    @patch("clusterscope.cluster_info.run_cli")
+    def test_get_nvidia_gpu_info_various_models(self, mock_run_cli):
+        """Test NVIDIA GPU info parsing with various GPU models."""
+        mock_run_cli.return_value = "NVIDIA H100 PCIe\nNVIDIA A40\nNVIDIA T4\nNVIDIA GeForce RTX 3090"
+        
+        result = self.local_node_info.get_nvidia_gpu_info()
+        expected = {"H100": 1, "A40": 1, "T4": 1}  # RTX 3090 not in supported list
+        self.assertEqual(result, expected)
+
+    @patch("clusterscope.cluster_info.run_cli")
+    def test_get_nvidia_gpu_info_empty_lines(self, mock_run_cli):
+        """Test NVIDIA GPU info parsing with empty lines."""
+        mock_run_cli.return_value = "NVIDIA A100-SXM4-40GB\n\n\nTesla V100-SXM2-16GB\n"
+        
+        result = self.local_node_info.get_nvidia_gpu_info()
+        expected = {"A100": 1, "V100": 1}
+        self.assertEqual(result, expected)
+
+    @patch("clusterscope.cluster_info.run_cli")
+    def test_get_amd_gpu_info_mi300x(self, mock_run_cli):
+        """Test AMD GPU information retrieval for MI300X."""
+        mock_run_cli.return_value = """GPU[0]: AMD Instinct MI300X
+GPU[1]: AMD Instinct MI300X"""
+        
+        result = self.local_node_info.get_amd_gpu_info()
+        expected = {"MI300X": 2}
+        self.assertEqual(result, expected)
+
+    @patch("clusterscope.cluster_info.run_cli")
+    def test_get_amd_gpu_info_mi300a(self, mock_run_cli):
+        """Test AMD GPU information retrieval for MI300A."""
+        mock_run_cli.return_value = "GPU[0]: AMD Instinct MI300A"
+        
+        result = self.local_node_info.get_amd_gpu_info()
+        expected = {"MI300A": 1}
+        self.assertEqual(result, expected)
+
+    @patch("clusterscope.cluster_info.run_cli")
+    def test_get_amd_gpu_info_various_models(self, mock_run_cli):
+        """Test AMD GPU info parsing with various GPU models."""
+        mock_run_cli.return_value = """GPU[0]: AMD Instinct MI250X
+GPU[1]: AMD Instinct MI210
+GPU[2]: AMD Instinct MI100
+GPU[3]: AMD Radeon RX 7900 XTX"""
+        
+        result = self.local_node_info.get_amd_gpu_info()
+        expected = {"MI250X": 1, "MI210": 1, "MI100": 1, "RX7900XTX": 1}
+        self.assertEqual(result, expected)
+
+    @patch("clusterscope.cluster_info.run_cli")
+    def test_get_amd_gpu_info_generic_fallback(self, mock_run_cli):
+        """Test AMD GPU info parsing with generic fallback for unknown models."""
+        mock_run_cli.return_value = "GPU[0]: AMD Radeon RX 6800 XT"
+        
+        result = self.local_node_info.get_amd_gpu_info()
+        # Should fall back to extracting "6800" as the model
+        expected = {"6800": 1}
+        self.assertEqual(result, expected)
+
+    @patch("clusterscope.cluster_info.run_cli")
+    def test_get_amd_gpu_info_no_gpu_lines(self, mock_run_cli):
+        """Test AMD GPU info parsing with no GPU lines."""
+        mock_run_cli.return_value = "Some other output\nNo GPU information here"
+        
+        result = self.local_node_info.get_amd_gpu_info()
+        self.assertEqual(result, {})
+
+    @patch.object(LocalNodeInfo, "has_nvidia_gpus")
+    @patch.object(LocalNodeInfo, "has_amd_gpus")
+    @patch.object(LocalNodeInfo, "get_nvidia_gpu_info")
+    @patch.object(LocalNodeInfo, "get_amd_gpu_info")
+    def test_get_gpu_generation_and_count_nvidia_only(self, mock_amd_info, mock_nvidia_info, mock_has_amd, mock_has_nvidia):
+        """Test get_gpu_generation_and_count with NVIDIA GPUs only."""
+        mock_has_nvidia.return_value = True
+        mock_has_amd.return_value = False
+        mock_nvidia_info.return_value = {"A100": 2, "V100": 1}
+        
+        result = self.local_node_info.get_gpu_generation_and_count()
+        expected = {"A100": 2, "V100": 1}
+        self.assertEqual(result, expected)
+
+    @patch.object(LocalNodeInfo, "has_nvidia_gpus")
+    @patch.object(LocalNodeInfo, "has_amd_gpus")
+    @patch.object(LocalNodeInfo, "get_nvidia_gpu_info")
+    @patch.object(LocalNodeInfo, "get_amd_gpu_info")
+    def test_get_gpu_generation_and_count_amd_only(self, mock_amd_info, mock_nvidia_info, mock_has_amd, mock_has_nvidia):
+        """Test get_gpu_generation_and_count with AMD GPUs only."""
+        mock_has_nvidia.return_value = False
+        mock_has_amd.return_value = True
+        mock_amd_info.return_value = {"MI300X": 4, "MI250X": 2}
+        
+        result = self.local_node_info.get_gpu_generation_and_count()
+        expected = {"MI300X": 4, "MI250X": 2}
+        self.assertEqual(result, expected)
+
+    @patch.object(LocalNodeInfo, "has_nvidia_gpus")
+    @patch.object(LocalNodeInfo, "has_amd_gpus")
+    @patch.object(LocalNodeInfo, "get_nvidia_gpu_info")
+    @patch.object(LocalNodeInfo, "get_amd_gpu_info")
+    def test_get_gpu_generation_and_count_both_vendors(self, mock_amd_info, mock_nvidia_info, mock_has_amd, mock_has_nvidia):
+        """Test get_gpu_generation_and_count with both NVIDIA and AMD GPUs."""
+        mock_has_nvidia.return_value = True
+        mock_has_amd.return_value = True
+        mock_nvidia_info.return_value = {"A100": 2}
+        mock_amd_info.return_value = {"MI300X": 4}
+        
+        result = self.local_node_info.get_gpu_generation_and_count()
+        expected = {"A100": 2, "MI300X": 4}
+        self.assertEqual(result, expected)
+
+    @patch.object(LocalNodeInfo, "has_nvidia_gpus")
+    @patch.object(LocalNodeInfo, "has_amd_gpus")
+    def test_get_gpu_generation_and_count_no_gpus(self, mock_has_amd, mock_has_nvidia):
+        """Test get_gpu_generation_and_count with no GPUs available."""
+        mock_has_nvidia.return_value = False
+        mock_has_amd.return_value = False
+        
+        with self.assertRaises(RuntimeError) as context:
+            self.local_node_info.get_gpu_generation_and_count()
+        self.assertIn("No GPUs found", str(context.exception))
+
+    @patch.object(LocalNodeInfo, "get_gpu_generation_and_count")
+    def test_has_gpu_type_true(self, mock_get_gpu_info):
+        """Test has_gpu_type returns True for available GPU types."""
+        mock_get_gpu_info.return_value = {"A100": 2, "MI300X": 4}
+        
+        self.assertTrue(self.local_node_info.has_gpu_type("A100"))
+        self.assertTrue(self.local_node_info.has_gpu_type("MI300X"))
+        self.assertTrue(self.local_node_info.has_gpu_type("a100"))  # Case insensitive
+        self.assertTrue(self.local_node_info.has_gpu_type("mi300x"))  # Case insensitive
+
+    @patch.object(LocalNodeInfo, "get_gpu_generation_and_count")
+    def test_has_gpu_type_false(self, mock_get_gpu_info):
+        """Test has_gpu_type returns False for unavailable GPU types."""
+        mock_get_gpu_info.return_value = {"A100": 2, "MI300X": 4}
+        
+        self.assertFalse(self.local_node_info.has_gpu_type("V100"))
+        self.assertFalse(self.local_node_info.has_gpu_type("MI250X"))
+        self.assertFalse(self.local_node_info.has_gpu_type("H100"))
+
+    @patch.object(LocalNodeInfo, "get_gpu_generation_and_count")
+    def test_has_gpu_type_runtime_error(self, mock_get_gpu_info):
+        """Test has_gpu_type returns False when get_gpu_generation_and_count raises RuntimeError."""
+        mock_get_gpu_info.side_effect = RuntimeError("No GPUs found")
+        
+        self.assertFalse(self.local_node_info.has_gpu_type("A100"))
+
+
+class TestUnifiedInfoAMDSupport(unittest.TestCase):
+    """Test cases for UnifiedInfo class AMD GPU support."""
+
+    def setUp(self):
+        self.unified_info = UnifiedInfo()
+
+    @patch.object(LocalNodeInfo, "get_gpu_vendor")
+    def test_get_gpu_vendor(self, mock_get_gpu_vendor):
+        """Test UnifiedInfo.get_gpu_vendor delegates to LocalNodeInfo."""
+        mock_get_gpu_vendor.return_value = "amd"
+        
+        result = self.unified_info.get_gpu_vendor()
+        self.assertEqual(result, "amd")
+        mock_get_gpu_vendor.assert_called_once()
+
+    @patch.object(LocalNodeInfo, "has_gpu_type")
+    def test_has_gpu_type_local_node(self, mock_has_gpu_type):
+        """Test UnifiedInfo.has_gpu_type with local node (non-Slurm)."""
+        self.unified_info.is_slurm_cluster = False
+        mock_has_gpu_type.return_value = True
+        
+        result = self.unified_info.has_gpu_type("MI300X")
+        self.assertTrue(result)
+        mock_has_gpu_type.assert_called_once_with("MI300X")
+
+    @patch.object(SlurmClusterInfo, "has_gpu_type")
+    def test_has_gpu_type_slurm_cluster(self, mock_has_gpu_type):
+        """Test UnifiedInfo.has_gpu_type with Slurm cluster."""
+        self.unified_info.is_slurm_cluster = True
+        mock_has_gpu_type.return_value = True
+        
+        result = self.unified_info.has_gpu_type("MI300X")
+        self.assertTrue(result)
+        mock_has_gpu_type.assert_called_once_with("MI300X")
+
+    def test_get_gpu_generation_and_count_with_amd_gpus(self):
+        """Test get_gpu_generation_and_count includes AMD GPUs."""
+        self.unified_info.is_slurm_cluster = False
+        self.unified_info.has_nvidia_gpus = False
+        self.unified_info.has_amd_gpus = True
+        
+        with patch.object(LocalNodeInfo, "get_gpu_generation_and_count") as mock_get_gpu_info:
+            mock_get_gpu_info.return_value = {"MI300X": 4}
+            
+            result = self.unified_info.get_gpu_generation_and_count()
+            self.assertEqual(result, {"MI300X": 4})
 
 
 class TestAWSClusterInfo(unittest.TestCase):
