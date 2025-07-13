@@ -137,7 +137,7 @@ class UnifiedInfo:
 
     def get_gpu_vendor(self) -> str:
         """Get the primary GPU vendor available on the system.
-        
+
         Returns:
             str: 'nvidia', 'amd', or 'none'
         """
@@ -249,7 +249,7 @@ class LocalNodeInfo:
 
     def get_gpu_vendor(self) -> str:
         """Determine the primary GPU vendor on the system.
-        
+
         Returns:
             str: 'nvidia', 'amd', or 'none'
         """
@@ -299,7 +299,7 @@ class LocalNodeInfo:
 
     def get_nvidia_gpu_info(self, timeout: int = 60) -> Dict[str, int]:
         """Get NVIDIA GPU information using nvidia-smi.
-        
+
         Returns:
             Dict[str, int]: Dictionary with GPU generation as keys and counts as values.
         """
@@ -319,7 +319,7 @@ class LocalNodeInfo:
                     parts = line.strip().split()
                     for part in parts:
                         # Look for common NVIDIA GPU patterns
-                        if any(gpu_type in part.upper() for gpu_type in 
+                        if any(gpu_type in part.upper() for gpu_type in
                                ['A100', 'A40', 'A30', 'A10', 'V100', 'P100', 'T4', 'H100', 'H200']):
                             # Extract the GPU model (e.g., A100, V100, etc.)
                             for gpu_type in ['A100', 'A40', 'A30', 'A10', 'V100', 'P100', 'T4', 'H100', 'H200']:
@@ -333,14 +333,14 @@ class LocalNodeInfo:
 
     def get_amd_gpu_info(self, timeout: int = 60) -> Dict[str, int]:
         """Get AMD GPU information using rocm-smi.
-        
+
         Returns:
             Dict[str, int]: Dictionary with GPU generation as keys and counts as values.
         """
         try:
             # First try to get basic GPU info
             result = run_cli(["rocm-smi", "--showproductname"], text=True, timeout=timeout)
-            
+
             gpu_info: Dict[str, int] = defaultdict(int)
             for line in result.strip().split("\n"):
                 if "GPU" in line and ":" in line:
@@ -353,7 +353,7 @@ class LocalNodeInfo:
                         #          "AMD Instinct MI250X" -> "MI250X"
                         #          "AMD Radeon RX 7900 XTX" -> "RX7900XTX"
                         gpu_name_upper = gpu_name.upper()
-                        
+
                         # Check for MI series (Instinct)
                         if "MI300" in gpu_name_upper:
                             if "MI300X" in gpu_name_upper:
@@ -380,7 +380,7 @@ class LocalNodeInfo:
                                 if any(char.isdigit() for char in word) and len(word) > 2:
                                     gpu_info[word] += 1
                                     break
-            
+
             return gpu_info
         except RuntimeError as e:
             raise RuntimeError(f"Failed to get AMD GPU information: {str(e)}")
@@ -395,7 +395,7 @@ class LocalNodeInfo:
             RuntimeError: If unable to retrieve GPU information.
         """
         gpu_info: Dict[str, int] = {}
-        
+
         # Try NVIDIA GPUs first
         if self.has_nvidia_gpus():
             try:
@@ -403,7 +403,7 @@ class LocalNodeInfo:
                 gpu_info.update(nvidia_info)
             except RuntimeError as e:
                 logging.warning(f"Failed to get NVIDIA GPU info: {e}")
-        
+
         # Try AMD GPUs
         if self.has_amd_gpus():
             try:
@@ -411,10 +411,10 @@ class LocalNodeInfo:
                 gpu_info.update(amd_info)
             except RuntimeError as e:
                 logging.warning(f"Failed to get AMD GPU info: {e}")
-        
+
         if not gpu_info:
             raise RuntimeError("No GPUs found or unable to retrieve GPU information")
-        
+
         return gpu_info
 
     def has_gpu_type(self, gpu_type: str) -> bool:

@@ -105,7 +105,7 @@ def main():
                 # Default: show both vendor and detailed info
                 vendor = unified_info.get_gpu_vendor()
                 gpu_counts = unified_info.get_gpu_generation_and_count()
-                
+
                 print(f"GPU vendor: {vendor}")
                 if gpu_counts:
                     print("GPU information:")
