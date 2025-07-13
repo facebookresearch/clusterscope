@@ -38,12 +38,18 @@ def main():
     gpus_parser.add_argument(
         "--counts", action="store_true", help="Show only GPU counts by type"
     )
+    gpus_parser.add_argument(
+        "--vendor", action="store_true", help="Show GPU vendor information"
+    )
 
     # Check GPU command
     check_gpu_parser = subparsers.add_parser(
         "check-gpu", help="Check if a specific GPU type exists"
     )
-    check_gpu_parser.add_argument("gpu_type", help="GPU type to check for (e.g., A100)")
+    check_gpu_parser.add_argument("gpu_type", help="GPU type to check for (e.g., A100, MI300X)")
+
+    # Memory command
+    mem_parser = subparsers.add_parser("mem", help="Show memory information per node")
 
     # AWS command
     aws_parser = subparsers.add_parser(
@@ -76,13 +82,37 @@ def main():
             print(mem_per_node)
 
         elif args.command == "gpus":
-            if args.counts:
-                print("TODO: counts by type:")
+            if args.vendor:
+                vendor = unified_info.get_gpu_vendor()
+                print(f"Primary GPU vendor: {vendor}")
+            elif args.counts:
+                gpu_counts = unified_info.get_gpu_generation_and_count()
+                if gpu_counts:
+                    print("GPU counts by type:")
+                    for gpu_type, count in sorted(gpu_counts.items()):
+                        print(f"  {gpu_type}: {count}")
+                else:
+                    print("No GPUs found")
+            elif args.generations:
+                gpu_counts = unified_info.get_gpu_generation_and_count()
+                if gpu_counts:
+                    print("GPU generations available:")
+                    for gen in sorted(gpu_counts.keys()):
+                        print(f"- {gen}")
+                else:
+                    print("No GPUs found")
             else:
-                generations = unified_info.get_gpu_generation_and_count()
-                print("GPU generations available:")
-                for gen in sorted(generations):
-                    print(f"- {gen}")
+                # Default: show both vendor and detailed info
+                vendor = unified_info.get_gpu_vendor()
+                gpu_counts = unified_info.get_gpu_generation_and_count()
+                
+                print(f"GPU vendor: {vendor}")
+                if gpu_counts:
+                    print("GPU information:")
+                    for gpu_type, count in sorted(gpu_counts.items()):
+                        print(f"  {gpu_type}: {count}")
+                else:
+                    print("No GPUs found")
 
         elif args.command == "check-gpu":
             gpu_type = args.gpu_type
