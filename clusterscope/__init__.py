@@ -5,6 +5,18 @@
 # LICENSE file in the root directory of this source tree.
 __version__ = "0.0.0"
 
-from clusterscope.lib import cluster, cpus, mem, slurm_version
+from clusterscope.lib import (
+    cluster,
+    cpus,
+    local_node_gpu_generation_and_count,
+    mem,
+    slurm_version,
+)
 
-__all__ = ["cluster", "slurm_version", "cpus", "mem"]
+__all__ = [
+    "cluster",
+    "slurm_version",
+    "cpus",
+    "mem",
+    "local_node_gpu_generation_and_count",
+]
