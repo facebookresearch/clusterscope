@@ -30,6 +30,7 @@ jobs:
 
       - name: print clusterscope version
         run: |
+          . .venv/bin/activate || source .venv/bin/activate
           python -c "import clusterscope; clusterscope.__version__"
 
   format:
@@ -140,4 +141,6 @@ jobs:
           make install
 
       - name: Run tests
-        run: python -m unittest discover -s tests
+        run: |
+          . .venv/bin/activate || source .venv/bin/activate
+          python -m unittest discover -s tests

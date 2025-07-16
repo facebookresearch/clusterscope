@@ -5,11 +5,10 @@
 # LICENSE file in the root directory of this source tree.
 from typing import Dict, Literal, Tuple
 
-from clusterscope.cluster_info import LocalNodeInfo, UnifiedInfo
+from clusterscope.cluster_info import UnifiedInfo
 from clusterscope.job_info import JobInfo
 
 unified_info = UnifiedInfo()
-local_info = LocalNodeInfo()
 job_info = JobInfo()
 
 
@@ -47,8 +46,8 @@ def mem(
 
 
 def local_node_gpu_generation_and_count() -> Dict[str, int]:
-    """Get the GPU generation and count for the local node."""
-    return local_info.get_gpu_generation_and_count()
+    """Get the GPU generation and count for the slurm cluster. Returns local gpus if not on a cluster."""
+    return unified_info.get_gpu_generation_and_count()
 
 
 is_torch_run = job_info.is_torch_run
