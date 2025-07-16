@@ -255,7 +255,7 @@ class LocalNodeInfo:
         Raises:
             RuntimeError: If unable to retrieve GPU information.
         """
-        assert self.has_nvidia_gpus() is True
+        assert self.has_nvidia_gpus() is True, "No nvidia GPUs found"
         try:
             result = run_cli(
                 ["nvidia-smi", "--query-gpu=gpu_name", "--format=csv,noheader"],
