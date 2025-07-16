@@ -302,6 +302,7 @@ class LocalNodeInfo:
         Returns:
             Dict[str, int]: Dictionary with GPU generation as keys and counts as values.
         """
+        assert self.has_nvidia_gpus() is True, "No nvidia GPUs found"
         try:
             result = run_cli(
                 ["nvidia-smi", "--query-gpu=gpu_name", "--format=csv,noheader"],
