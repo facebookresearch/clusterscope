@@ -21,6 +21,7 @@ authors = [
 ]
 dependencies = [
     "opentelemetry-api>=1.33.1",
+    "opentelemetry-exporter-otlp>=1.33.1",
     "opentelemetry-sdk>=1.33.1",
 ]
 
