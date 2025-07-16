@@ -1,7 +1,7 @@
 import getpass
 import os
 import socket
-from typing import Dict, Hashable, Optional, Union
+from typing import Mapping, Optional, Union
 
 from opentelemetry import metrics, trace
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
@@ -29,7 +29,7 @@ OTEL_EXPORTER_OTLP_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
 
 
 def setup_opentelemetry(
-    resource_attributes: Optional[Dict[Hashable, Union[str, int]]] = None,
+    resource_attributes: Optional[Mapping[str, Union[str, int]]] = None,
     init_tracer_provider: bool = True,
     init_meter_provider: bool = True,
 ):
@@ -57,7 +57,7 @@ def setup_opentelemetry(
         span_processor = BatchSpanProcessor(otlp_span_exporter)
         tracer_provider.add_span_processor(span_processor)
     else:
-        tracer_provider = NoOpTracerProvider()
+        tracer_provider = NoOpTracerProvider()  # type: ignore[assignment]
     trace.set_tracer_provider(tracer_provider)
 
     if init_meter_provider:
@@ -74,7 +74,7 @@ def setup_opentelemetry(
             resource=resource, metric_readers=[metric_reader], shutdown_on_exit=True
         )
     else:
-        meter_provider = NoOpMeterProvider()
+        meter_provider = NoOpMeterProvider()  # type: ignore[assignment]
     metrics.set_meter_provider(meter_provider)
 
     return tracer_provider, meter_provider

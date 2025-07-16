@@ -2,6 +2,8 @@
 #    uv pip compile pyproject.toml -o requirements.txt
 certifi==2025.7.14
     # via requests
+cfgv==3.4.0
+    # via pre-commit
 charset-normalizer==3.4.2
     # via requests
 deprecated==1.2.18
@@ -10,16 +12,32 @@ deprecated==1.2.18
     #   opentelemetry-exporter-otlp-proto-grpc
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-semantic-conventions
+distlib==0.3.9
+    # via virtualenv
+filelock==3.16.1
+    # via virtualenv
+flake8==7.1.2
+    # via clusterscope (pyproject.toml)
 googleapis-common-protos==1.70.0
     # via
     #   opentelemetry-exporter-otlp-proto-grpc
     #   opentelemetry-exporter-otlp-proto-http
 grpcio==1.70.0
     # via opentelemetry-exporter-otlp-proto-grpc
+identify==2.6.1
+    # via pre-commit
 idna==3.10
     # via requests
 importlib-metadata==8.5.0
     # via opentelemetry-api
+mccabe==0.7.0
+    # via flake8
+mypy==1.14.1
+    # via clusterscope (pyproject.toml)
+mypy-extensions==1.1.0
+    # via mypy
+nodeenv==1.9.1
+    # via pre-commit
 opentelemetry-api==1.33.1
     # via
     #   clusterscope (pyproject.toml)
@@ -49,16 +67,32 @@ opentelemetry-sdk==1.33.1
     #   opentelemetry-exporter-otlp-proto-http
 opentelemetry-semantic-conventions==0.54b1
     # via opentelemetry-sdk
+platformdirs==4.3.6
+    # via virtualenv
+pre-commit==3.5.0
+    # via clusterscope (pyproject.toml)
 protobuf==5.29.5
     # via
     #   googleapis-common-protos
     #   opentelemetry-proto
+pycodestyle==2.12.1
+    # via flake8
+pyflakes==3.2.0
+    # via flake8
+pyyaml==6.0.2
+    # via pre-commit
 requests==2.32.4
     # via opentelemetry-exporter-otlp-proto-http
+tomli==2.2.1
+    # via mypy
 typing-extensions==4.13.2
-    # via opentelemetry-sdk
+    # via
+    #   mypy
+    #   opentelemetry-sdk
 urllib3==2.2.3
     # via requests
+virtualenv==20.31.2
+    # via pre-commit
 wrapt==1.17.2
     # via deprecated
 zipp==3.20.2
