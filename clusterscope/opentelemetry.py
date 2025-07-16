@@ -46,7 +46,7 @@ def setup_opentelemetry(
         "gpu_type": local_node_gpu_generation_and_count(),
         **(resource_attributes or {}),
     }
-    resource = Resource(attributes=resource_attributes)
+    resource = Resource(attributes=final_resource_attributes)
 
     if init_tracer_provider:
         # Set up tracing with OTLP HTTP exporter
