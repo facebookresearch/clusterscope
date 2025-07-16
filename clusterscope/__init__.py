@@ -20,6 +20,7 @@ from clusterscope.lib import (
     slurm_version,
     world_size,
 )
+from clusterscope.opentelemetry import setup_opentelemetry
 
 __all__ = [
     "cluster",
@@ -35,4 +36,5 @@ __all__ = [
     "local_rank",
     "world_size",
     "is_rank_zero",
+    "setup_opentelemetry",
 ]

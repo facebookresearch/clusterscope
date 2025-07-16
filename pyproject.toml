@@ -19,7 +19,10 @@ authors = [
   {name = "Lucca Bertoncini", email = "luccab@meta.com"},
   {name = "Kalyan Saladi", email = "skalyan@meta.com"}
 ]
-dependencies = []
+dependencies = [
+    "opentelemetry-api>=1.33.1",
+    "opentelemetry-sdk>=1.33.1",
+]
 
 [project.scripts]
 cscope = "clusterscope.cli:main"
