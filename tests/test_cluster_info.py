@@ -255,7 +255,7 @@ class TestRunCli(unittest.TestCase):
         self.assertIn(
             "Command 'sleep 10' timed out after 1 seconds", str(context.exception)
         )
-    
+
     @patch("shutil.which")
     @patch("subprocess.check_output")
     def test_run_cli_subprocess_error(self, mock_check_output, mock_which):
@@ -582,7 +582,7 @@ class TestUnifiedInfoAMDSupport(unittest.TestCase):
             result = self.unified_info.get_gpu_generation_and_count()
             self.assertEqual(result, {"MI300X": 4})
 
-            
+
 class TestAWSClusterInfo(unittest.TestCase):
     def setUp(self):
         self.aws_cluster_info = AWSClusterInfo()

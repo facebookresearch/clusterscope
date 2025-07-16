@@ -432,7 +432,7 @@ class LocalNodeInfo:
                 logging.warning(f"Failed to get NVIDIA GPU info: {e}")
 
         # Try AMD GPUs
-        else if self.has_amd_gpus():
+        elif self.has_amd_gpus():
             try:
                 amd_info = self.get_amd_gpu_info(timeout)
                 gpu_info.update(amd_info)
