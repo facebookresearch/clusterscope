@@ -302,6 +302,7 @@ class LocalNodeInfo:
         Returns:
             Dict[str, int]: Dictionary with GPU generation as keys and counts as values.
         """
+        assert self.has_nvidia_gpus() is True, "No nvidia GPUs found"
         try:
             result = run_cli(
                 ["nvidia-smi", "--query-gpu=gpu_name", "--format=csv,noheader"],
@@ -431,14 +432,14 @@ class LocalNodeInfo:
                 logging.warning(f"Failed to get NVIDIA GPU info: {e}")
 
         # Try AMD GPUs
-        if self.has_amd_gpus():
+        else if self.has_amd_gpus():
             try:
                 amd_info = self.get_amd_gpu_info(timeout)
                 gpu_info.update(amd_info)
             except RuntimeError as e:
                 logging.warning(f"Failed to get AMD GPU info: {e}")
 
-        if not gpu_info:
+        else:
             raise RuntimeError("No GPUs found or unable to retrieve GPU information")
 
         return gpu_info

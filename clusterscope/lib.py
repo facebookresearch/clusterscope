@@ -3,11 +3,12 @@
 
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
-from typing import Literal, Tuple
+from typing import Dict, Literal, Tuple
 
-from clusterscope.cluster_info import UnifiedInfo
+from clusterscope.cluster_info import LocalNodeInfo, UnifiedInfo
 
 unified_info = UnifiedInfo()
+local_info = LocalNodeInfo()
 
 
 def cluster() -> str:
@@ -41,3 +42,8 @@ def mem(
             f"{to_unit} is not a supported unit. Currently supported units: MB, GB"
         )
     return mem
+
+
+def local_node_gpu_generation_and_count() -> Dict[str, int]:
+    """Get the GPU generation and count for the local node."""
+    return local_info.get_gpu_generation_and_count()
