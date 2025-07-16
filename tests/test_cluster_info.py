@@ -11,9 +11,9 @@ from clusterscope.cluster_info import (
     AWSClusterInfo,
     DarwinInfo,
     LinuxInfo,
+    run_cli,
     SlurmClusterInfo,
     UnifiedInfo,
-    run_cli,
 )
 
 
@@ -193,7 +193,9 @@ class TestRunCli(unittest.TestCase):
 
         with self.assertRaises(RuntimeError) as context:
             run_cli(["nonexistent_command"])
-        self.assertIn("Command 'nonexistent_command' is not available", str(context.exception))
+        self.assertIn(
+            "Command 'nonexistent_command' is not available", str(context.exception)
+        )
 
     @patch("shutil.which")
     @patch("subprocess.check_output")
@@ -205,10 +207,7 @@ class TestRunCli(unittest.TestCase):
         result = run_cli(["echo", "Hello World"])
         self.assertEqual(result, "Hello World\n")
         mock_check_output.assert_called_once_with(
-            ["echo", "Hello World"],
-            text=True,
-            timeout=60,
-            stderr=None
+            ["echo", "Hello World"], text=True, timeout=60, stderr=None
         )
 
     @patch("shutil.which")
@@ -218,13 +217,12 @@ class TestRunCli(unittest.TestCase):
         mock_which.return_value = "/usr/bin/echo"
         mock_check_output.return_value = b"Binary output"
 
-        result = run_cli(["echo", "test"], text=False, timeout=30, stderr=subprocess.STDOUT)
+        result = run_cli(
+            ["echo", "test"], text=False, timeout=30, stderr=subprocess.STDOUT
+        )
         self.assertEqual(result, b"Binary output")
         mock_check_output.assert_called_once_with(
-            ["echo", "test"],
-            text=False,
-            timeout=30,
-            stderr=subprocess.STDOUT
+            ["echo", "test"], text=False, timeout=30, stderr=subprocess.STDOUT
         )
 
     @patch("shutil.which")
@@ -238,7 +236,9 @@ class TestRunCli(unittest.TestCase):
 
         with self.assertRaises(RuntimeError) as context:
             run_cli(["false"])
-        self.assertIn("Command 'false' failed with return code 1", str(context.exception))
+        self.assertIn(
+            "Command 'false' failed with return code 1", str(context.exception)
+        )
 
     @patch("shutil.which")
     @patch("subprocess.check_output")
@@ -251,14 +251,18 @@ class TestRunCli(unittest.TestCase):
 
         with self.assertRaises(RuntimeError) as context:
             run_cli(["sleep", "10"], timeout=1)
-        self.assertIn("Command 'sleep 10' timed out after 1 seconds", str(context.exception))
+        self.assertIn(
+            "Command 'sleep 10' timed out after 1 seconds", str(context.exception)
+        )
 
     @patch("shutil.which")
     @patch("subprocess.check_output")
     def test_run_cli_subprocess_error(self, mock_check_output, mock_which):
         """Test that run_cli handles SubprocessError properly."""
         mock_which.return_value = "/usr/bin/echo"
-        mock_check_output.side_effect = subprocess.SubprocessError("Generic subprocess error")
+        mock_check_output.side_effect = subprocess.SubprocessError(
+            "Generic subprocess error"
+        )
 
         with self.assertRaises(RuntimeError) as context:
             run_cli(["echo", "test"])

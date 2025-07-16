@@ -18,7 +18,7 @@ def run_cli(
     cmd: List[str],
     text: bool = True,
     timeout: int = 60,
-    stderr: Union[int, None] = None
+    stderr: Union[int, None] = None,
 ) -> str:
     """
     Run a CLI command after verifying it's available.
@@ -45,17 +45,16 @@ def run_cli(
         raise RuntimeError(f"Command '{command_name}' is not available on this system")
 
     try:
-        result = subprocess.check_output(
-            cmd,
-            text=text,
-            timeout=timeout,
-            stderr=stderr
-        )
+        result = subprocess.check_output(cmd, text=text, timeout=timeout, stderr=stderr)
         return result
     except subprocess.CalledProcessError as e:
-        raise RuntimeError(f"Command '{' '.join(cmd)}' failed with return code {e.returncode}: {e.output}")
+        raise RuntimeError(
+            f"Command '{' '.join(cmd)}' failed with return code {e.returncode}: {e.output}"
+        )
     except subprocess.TimeoutExpired as e:
-        raise RuntimeError(f"Command '{' '.join(cmd)}' timed out after {timeout} seconds")
+        raise RuntimeError(
+            f"Command '{' '.join(cmd)}' timed out after {timeout} seconds"
+        )
     except (subprocess.SubprocessError, FileNotFoundError) as e:
         raise RuntimeError(f"Failed to execute command '{' '.join(cmd)}': {str(e)}")
 
