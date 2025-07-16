@@ -18,7 +18,7 @@ def run_cli(
     cmd: List[str],
     text: bool = True,
     timeout: int = 60,
-    stderr: Union[int, None] = None
+    stderr: Union[int, None] = None,
 ) -> str:
     """
     Run a CLI command after verifying it's available.
@@ -45,17 +45,16 @@ def run_cli(
         raise RuntimeError(f"Command '{command_name}' is not available on this system")
 
     try:
-        result = subprocess.check_output(
-            cmd,
-            text=text,
-            timeout=timeout,
-            stderr=stderr
-        )
+        result = subprocess.check_output(cmd, text=text, timeout=timeout, stderr=stderr)
         return result
     except subprocess.CalledProcessError as e:
-        raise RuntimeError(f"Command '{' '.join(cmd)}' failed with return code {e.returncode}: {e.output}")
+        raise RuntimeError(
+            f"Command '{' '.join(cmd)}' failed with return code {e.returncode}: {e.output}"
+        )
     except subprocess.TimeoutExpired as e:
-        raise RuntimeError(f"Command '{' '.join(cmd)}' timed out after {timeout} seconds")
+        raise RuntimeError(
+            f"Command '{' '.join(cmd)}' timed out after {timeout} seconds"
+        )
     except (subprocess.SubprocessError, FileNotFoundError) as e:
         raise RuntimeError(f"Failed to execute command '{' '.join(cmd)}': {str(e)}")
 
@@ -254,11 +253,11 @@ class LocalNodeInfo:
             str: 'nvidia', 'amd', or 'none'
         """
         if self.has_nvidia_gpus():
-            return 'nvidia'
+            return "nvidia"
         elif self.has_amd_gpus():
-            return 'amd'
+            return "amd"
         else:
-            return 'none'
+            return "none"
 
     @fs_cache(var_name="LOCAL_NODE_CPU_COUNT")
     def get_cpu_count(self, timeout: int = 60) -> int:
@@ -319,10 +318,32 @@ class LocalNodeInfo:
                     parts = line.strip().split()
                     for part in parts:
                         # Look for common NVIDIA GPU patterns
-                        if any(gpu_type in part.upper() for gpu_type in
-                               ['A100', 'A40', 'A30', 'A10', 'V100', 'P100', 'T4', 'H100', 'H200']):
+                        if any(
+                            gpu_type in part.upper()
+                            for gpu_type in [
+                                "A100",
+                                "A40",
+                                "A30",
+                                "A10",
+                                "V100",
+                                "P100",
+                                "T4",
+                                "H100",
+                                "H200",
+                            ]
+                        ):
                             # Extract the GPU model (e.g., A100, V100, etc.)
-                            for gpu_type in ['A100', 'A40', 'A30', 'A10', 'V100', 'P100', 'T4', 'H100', 'H200']:
+                            for gpu_type in [
+                                "A100",
+                                "A40",
+                                "A30",
+                                "A10",
+                                "V100",
+                                "P100",
+                                "T4",
+                                "H100",
+                                "H200",
+                            ]:
                                 if gpu_type in part.upper():
                                     gpu_info[gpu_type] += 1
                                     break
@@ -339,7 +360,9 @@ class LocalNodeInfo:
         """
         try:
             # First try to get basic GPU info
-            result = run_cli(["rocm-smi", "--showproductname"], text=True, timeout=timeout)
+            result = run_cli(
+                ["rocm-smi", "--showproductname"], text=True, timeout=timeout
+            )
 
             gpu_info: Dict[str, int] = defaultdict(int)
             for line in result.strip().split("\n"):
@@ -377,7 +400,10 @@ class LocalNodeInfo:
                             # Generic fallback - try to extract model number
                             words = gpu_name_upper.split()
                             for word in words:
-                                if any(char.isdigit() for char in word) and len(word) > 2:
+                                if (
+                                    any(char.isdigit() for char in word)
+                                    and len(word) > 2
+                                ):
                                     gpu_info[word] += 1
                                     break
 

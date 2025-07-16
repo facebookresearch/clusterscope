@@ -46,7 +46,9 @@ def main():
     check_gpu_parser = subparsers.add_parser(
         "check-gpu", help="Check if a specific GPU type exists"
     )
-    check_gpu_parser.add_argument("gpu_type", help="GPU type to check for (e.g., A100, MI300X)")
+    check_gpu_parser.add_argument(
+        "gpu_type", help="GPU type to check for (e.g., A100, MI300X)"
+    )
 
     # Memory command
     mem_parser = subparsers.add_parser("mem", help="Show memory information per node")
