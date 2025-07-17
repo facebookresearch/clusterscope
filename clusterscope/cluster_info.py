@@ -450,8 +450,11 @@ class LocalNodeInfo:
 
         # Only raise an error if no GPUs were found and we're not in a test environment
         if not gpu_info and not (
-            "mock" in str(run_cli.__module__) or
-            any(m.startswith("test_") for m in [f for f in dir(self) if callable(getattr(self, f))])
+            "mock" in str(run_cli.__module__)
+            or any(
+                m.startswith("test_")
+                for m in [f for f in dir(self) if callable(getattr(self, f))]
+            )
         ):
             raise RuntimeError("No GPUs found or unable to retrieve GPU information")
 
