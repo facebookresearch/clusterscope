@@ -206,7 +206,7 @@ class LocalNodeInfo:
                 check=True,
             )
             return True
-        except FileNotFoundError:
+        except (FileNotFoundError, subprocess.CalledProcessError):
             return False
 
     @fs_cache(var_name="LOCAL_NODE_CPU_COUNT")
