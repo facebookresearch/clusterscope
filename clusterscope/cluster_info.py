@@ -11,6 +11,7 @@ from collections import defaultdict
 from functools import lru_cache
 from typing import Dict, List, Set, Union
 
+import tenacity
 from clusterscope.cache import fs_cache
 
 
@@ -287,19 +288,28 @@ class SlurmClusterInfo:
         if shutil.which("sinfo") is not None:
             self.is_slurm_cluster = self.verify_slurm_available()
 
-    @lru_cache(maxsize=1)
     def verify_slurm_available(self) -> bool:
-        """Verify that Slurm commands are available on the system."""
+        """Verify that Slurm commands are available on the system with retries."""
         try:
-            subprocess.run(
-                ["sinfo", "--version"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                check=True,
-            )
+            self._verify_slurm_available_with_retry()
             return True
         except (subprocess.SubprocessError, FileNotFoundError):
             return False
+
+    @tenacity.retry(
+        stop=tenacity.stop_after_attempt(3),
+        wait=tenacity.wait_exponential(multiplier=1, min=1, max=10),
+        retry=tenacity.retry_if_exception_type((subprocess.SubprocessError, FileNotFoundError)),
+        reraise=True
+    )
+    def _verify_slurm_available_with_retry(self) -> None:
+        """Internal method that performs the actual verification with retries."""
+        subprocess.run(
+            ["sinfo", "--version"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+        )
 
     @fs_cache(var_name="SLURM_VERSION")
     def get_slurm_version(self, timeout: int = 60) -> str:
@@ -441,7 +451,7 @@ class SlurmClusterInfo:
         """Get the set of GPU generations available in the cluster.
 
         Returns:
-            Set[str]: A set of GPU generation names (e.g., {"A100", "V100", "P100"})
+            Set[str]: A set of GPU generation names (e.g., {"A100", "H100", "B100"})
 
         Raises:
             RuntimeError: If unable to retrieve GPU information.
