@@ -92,5 +92,5 @@ usort==1.0.8.post1
     # via
     #   clusterscope (pyproject.toml)
     #   ufmt
-virtualenv==20.31.2
+virtualenv==20.32.0
     # via pre-commit
