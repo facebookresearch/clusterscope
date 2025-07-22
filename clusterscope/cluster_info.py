@@ -327,9 +327,17 @@ class LocalNodeInfo:
         Returns:
             Dict[str, int]: Dictionary with GPU generation as keys and counts as values.
         """
-        # Skip the check in test environments where run_cli is mocked
-        if not self.has_nvidia_gpus() and "mock" not in str(run_cli.__module__):
-            raise RuntimeError("No NVIDIA GPUs found")
+        # Check if NVIDIA GPUs are available
+        if not self.has_nvidia_gpus():
+            try:
+                # Try to run nvidia-smi command
+                result = run_cli(
+                    ["nvidia-smi", "--query-gpu=gpu_name", "--format=csv,noheader"],
+                    text=True,
+                    timeout=timeout,
+                )
+            except RuntimeError:
+                raise RuntimeError("No NVIDIA GPUs found")
         try:
             result = run_cli(
                 ["nvidia-smi", "--query-gpu=gpu_name", "--format=csv,noheader"],
@@ -376,9 +384,17 @@ class LocalNodeInfo:
         Returns:
             Dict[str, int]: Dictionary with GPU generation as keys and counts as values.
         """
-        # Skip the check in test environments where run_cli is mocked
-        if not self.has_amd_gpus() and "mock" not in str(run_cli.__module__):
-            raise RuntimeError("No AMD GPUs found")
+        # Check if AMD GPUs are available
+        if not self.has_amd_gpus():
+            try:
+                # Try to run rocm-smi command
+                result = run_cli(
+                    ["rocm-smi", "--showproductname"],
+                    text=True,
+                    timeout=timeout,
+                )
+            except RuntimeError:
+                raise RuntimeError("No AMD GPUs found")
         try:
             result = run_cli(
                 ["rocm-smi", "--showproductname"], text=True, timeout=timeout
