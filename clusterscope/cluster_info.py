@@ -13,6 +13,31 @@ from typing import Dict, List, Set, Union
 
 from clusterscope.cache import fs_cache
 
+# Common NVIDIA GPU types
+NVIDIA_GPU_TYPES = {
+    "A100": "A100",
+    "A40": "A40",
+    "A30": "A30",
+    "A10": "A10",
+    "V100": "V100",
+    "P100": "P100",
+    "T4": "T4",
+    "H100": "H100",
+    "H200": "H200",
+}
+
+# Common AMD GPU types
+AMD_GPU_TYPES = {
+    "MI300X": "MI300X",
+    "MI300A": "MI300A",
+    "MI300": "MI300",
+    "MI250X": "MI250X",
+    "MI210": "MI210",
+    "MI100": "MI100",
+    "RX7900XTX": "RX 7900",
+    "RX6900XT": "RX 6900",
+}
+
 
 def run_cli(
     cmd: List[str],
@@ -65,6 +90,7 @@ class UnifiedInfo:
         self.slurm_cluster_info = SlurmClusterInfo()
         self.is_slurm_cluster = self.slurm_cluster_info.verify_slurm_available()
         self.has_nvidia_gpus = self.local_node_info.has_nvidia_gpus()
+        self.has_amd_gpus = self.local_node_info.has_amd_gpus()
         self.aws_cluster_info = AWSClusterInfo()
 
     def get_cluster_name(self) -> str:
@@ -115,9 +141,31 @@ class UnifiedInfo:
         """
         if self.is_slurm_cluster:
             return self.slurm_cluster_info.get_gpu_generation_and_count()
-        if self.has_nvidia_gpus:
+        if self.has_nvidia_gpus or self.has_amd_gpus:
             return self.local_node_info.get_gpu_generation_and_count()
         return {}
+
+    def has_gpu_type(self, gpu_type: str) -> bool:
+        """Check if a specific GPU type is available.
+
+        Args:
+            gpu_type (str): The GPU type to check for (e.g., "A100", "MI300X", "V100")
+
+        Returns:
+            bool: True if the GPU type is available, False otherwise
+        """
+        if self.is_slurm_cluster:
+            return self.slurm_cluster_info.has_gpu_type(gpu_type)
+        else:
+            return self.local_node_info.has_gpu_type(gpu_type)
+
+    def get_gpu_vendor(self) -> str:
+        """Get the primary GPU vendor available on the system.
+
+        Returns:
+            str: 'nvidia', 'amd', or 'none'
+        """
+        return self.local_node_info.get_gpu_vendor()
 
 
 class DarwinInfo:
@@ -209,6 +257,33 @@ class LocalNodeInfo:
         except (FileNotFoundError, subprocess.CalledProcessError):
             return False
 
+    @lru_cache(maxsize=1)
+    def has_amd_gpus(self) -> bool:
+        """Verify that AMD GPU is available on the system."""
+        try:
+            subprocess.run(
+                ["rocm-smi"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True,
+            )
+            return True
+        except (FileNotFoundError, subprocess.CalledProcessError):
+            return False
+
+    def get_gpu_vendor(self) -> str:
+        """Determine the primary GPU vendor on the system.
+
+        Returns:
+            str: 'nvidia', 'amd', or 'none'
+        """
+        if self.has_nvidia_gpus():
+            return "nvidia"
+        elif self.has_amd_gpus():
+            return "amd"
+        else:
+            return "none"
+
     @fs_cache(var_name="LOCAL_NODE_CPU_COUNT")
     def get_cpu_count(self, timeout: int = 60) -> int:
         """Get the number of CPUs on the local node.
@@ -246,16 +321,23 @@ class LocalNodeInfo:
         assert 0 < mem <= 10**12, f"Likely invalid memory: {mem}"
         return mem
 
-    def get_gpu_generation_and_count(self, timeout: int = 60) -> Dict[str, int]:
-        """Get the number of GPUs on the local node.
+    def get_nvidia_gpu_info(self, timeout: int = 60) -> Dict[str, int]:
+        """Get NVIDIA GPU information using nvidia-smi.
 
         Returns:
-            int: The number of GPUs on the local node.
-
-        Raises:
-            RuntimeError: If unable to retrieve GPU information.
+            Dict[str, int]: Dictionary with GPU generation as keys and counts as values.
         """
-        assert self.has_nvidia_gpus() is True, "No nvidia GPUs found"
+        # Check if NVIDIA GPUs are available
+        if not self.has_nvidia_gpus():
+            try:
+                # Try to run nvidia-smi command
+                result = run_cli(
+                    ["nvidia-smi", "--query-gpu=gpu_name", "--format=csv,noheader"],
+                    text=True,
+                    timeout=timeout,
+                )
+            except RuntimeError:
+                raise RuntimeError("No NVIDIA GPUs found")
         try:
             result = run_cli(
                 ["nvidia-smi", "--query-gpu=gpu_name", "--format=csv,noheader"],
@@ -265,13 +347,139 @@ class LocalNodeInfo:
 
             gpu_info: Dict[str, int] = defaultdict(int)
             for line in result.strip().split("\n"):
-                parts = line.split()
-                gpu_gen = parts[1]
-                gpu_info[gpu_gen] += 1
-            return gpu_info
+                if line.strip():
+                    # Extract GPU generation from full name
+                    # Examples: "NVIDIA A100-SXM4-40GB" -> "A100"
+                    #          "Tesla V100-SXM2-16GB" -> "V100"
+                    gpu_name_upper = line.strip().upper()
 
+                    # Check for known NVIDIA GPU types
+                    found_gpu = False
+                    for gpu_key, gpu_pattern in NVIDIA_GPU_TYPES.items():
+                        if gpu_pattern in gpu_name_upper:
+                            gpu_info[gpu_key] += 1
+                            found_gpu = True
+                            break
+
+                    # If no known GPU type was found
+                    if not found_gpu:
+                        # Generic fallback - try to extract model number
+                        words = gpu_name_upper.split()
+                        for word in words:
+                            if any(char.isdigit() for char in word) and len(word) > 2:
+                                gpu_info[word] += 1
+                                break
+
+            return gpu_info
         except RuntimeError as e:
-            raise RuntimeError(f"Failed to get GPU information: {str(e)}")
+            raise RuntimeError(f"Failed to get NVIDIA GPU information: {str(e)}")
+
+    def get_amd_gpu_info(self, timeout: int = 60) -> Dict[str, int]:
+        """Get AMD GPU information using rocm-smi.
+
+        Returns:
+            Dict[str, int]: Dictionary with GPU generation as keys and counts as values.
+        """
+        # Check if AMD GPUs are available
+        if not self.has_amd_gpus():
+            try:
+                # Try to run rocm-smi command
+                result = run_cli(
+                    ["rocm-smi", "--showproductname"],
+                    text=True,
+                    timeout=timeout,
+                )
+            except RuntimeError:
+                raise RuntimeError("No AMD GPUs found")
+        try:
+            result = run_cli(
+                ["rocm-smi", "--showproductname"], text=True, timeout=timeout
+            )
+
+            gpu_info: Dict[str, int] = defaultdict(int)
+            for line in result.strip().split("\n"):
+                if "GPU" in line and ":" in line:
+                    # Parse lines like "GPU[0]: AMD Instinct MI300X"
+                    parts = line.split(":")
+                    if len(parts) >= 2:
+                        gpu_name = parts[1].strip()
+                        # Extract GPU generation from full name
+                        # Examples: "AMD Instinct MI300X" -> "MI300X"
+                        #          "AMD Instinct MI250X" -> "MI250X"
+                        #          "AMD Radeon RX 7900 XTX" -> "RX7900XTX"
+                        gpu_name_upper = gpu_name.upper()
+
+                        # Check for known AMD GPU types
+                        found_gpu = False
+                        for gpu_key, gpu_pattern in AMD_GPU_TYPES.items():
+                            if gpu_pattern in gpu_name_upper:
+                                gpu_info[gpu_key] += 1
+                                found_gpu = True
+                                break
+
+                        # If no known GPU type was found
+                        if not found_gpu:
+                            # Generic fallback - try to extract model number
+                            words = gpu_name_upper.split()
+                            for word in words:
+                                if (
+                                    any(char.isdigit() for char in word)
+                                    and len(word) > 2
+                                ):
+                                    gpu_info[word] += 1
+                                    break
+
+            return gpu_info
+        except RuntimeError as e:
+            raise RuntimeError(f"Failed to get AMD GPU information: {str(e)}")
+
+    def get_gpu_generation_and_count(self, timeout: int = 60) -> Dict[str, int]:
+        """Get GPU information for all available GPUs on the local node.
+
+        Returns:
+            Dict[str, int]: Dictionary with GPU generation as keys and counts as values.
+
+        Raises:
+            RuntimeError: If unable to retrieve GPU information.
+        """
+        gpu_info: Dict[str, int] = {}
+
+        # Try NVIDIA GPUs
+        if self.has_nvidia_gpus():
+            try:
+                nvidia_info = self.get_nvidia_gpu_info(timeout)
+                gpu_info.update(nvidia_info)
+            except RuntimeError as e:
+                logging.warning(f"Failed to get NVIDIA GPU info: {e}")
+
+        # Try AMD GPUs
+        if self.has_amd_gpus():
+            try:
+                amd_info = self.get_amd_gpu_info(timeout)
+                gpu_info.update(amd_info)
+            except RuntimeError as e:
+                logging.warning(f"Failed to get AMD GPU info: {e}")
+
+        # Raise an error if no GPUs were found
+        if not gpu_info:
+            logging.warning("No GPUs found or unable to retrieve GPU information")
+
+        return gpu_info
+
+    def has_gpu_type(self, gpu_type: str) -> bool:
+        """Check if a specific GPU type is available on the local node.
+
+        Args:
+            gpu_type (str): The GPU type to check for (e.g., "A100", "MI300X")
+
+        Returns:
+            bool: True if the GPU type is available, False otherwise
+        """
+        try:
+            gpu_counts = self.get_gpu_generation_and_count()
+            return gpu_type.upper() in [k.upper() for k in gpu_counts.keys()]
+        except RuntimeError:
+            return False
 
 
 class SlurmClusterInfo:
