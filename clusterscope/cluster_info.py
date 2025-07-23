@@ -369,7 +369,6 @@ class LocalNodeInfo:
                             if (
                                 any(char.isdigit() for char in word)
                                 and len(word) > 2
-                                and word != "3090"  # Exclude RTX 3090
                             ):
                                 gpu_info[word] += 1
                                 break

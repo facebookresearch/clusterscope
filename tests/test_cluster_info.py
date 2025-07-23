@@ -378,17 +378,6 @@ class TestLocalNodeInfo(unittest.TestCase):
         self.assertEqual(result, expected)
 
     @patch("clusterscope.cluster_info.run_cli")
-    def test_get_nvidia_gpu_info_various_models(self, mock_run_cli):
-        """Test NVIDIA GPU info parsing with various GPU models."""
-        mock_run_cli.return_value = (
-            "NVIDIA H100 PCIe\nNVIDIA A40\nNVIDIA T4\nNVIDIA GeForce RTX 3090"
-        )
-
-        result = self.local_node_info.get_nvidia_gpu_info()
-        expected = {"H100": 1, "A40": 1, "T4": 1}  # RTX 3090 not in supported list
-        self.assertEqual(result, expected)
-
-    @patch("clusterscope.cluster_info.run_cli")
     def test_get_nvidia_gpu_info_empty_lines(self, mock_run_cli):
         """Test NVIDIA GPU info parsing with empty lines."""
         mock_run_cli.return_value = "NVIDIA A100-SXM4-40GB\n\n\nTesla V100-SXM2-16GB\n"
