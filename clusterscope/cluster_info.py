@@ -366,10 +366,7 @@ class LocalNodeInfo:
                         # Generic fallback - try to extract model number
                         words = gpu_name_upper.split()
                         for word in words:
-                            if (
-                                any(char.isdigit() for char in word)
-                                and len(word) > 2
-                            ):
+                            if any(char.isdigit() for char in word) and len(word) > 2:
                                 gpu_info[word] += 1
                                 break
 
