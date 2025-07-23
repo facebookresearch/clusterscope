@@ -462,7 +462,7 @@ class LocalNodeInfo:
 
         # Raise an error if no GPUs were found
         if not gpu_info:
-            raise RuntimeError("No GPUs found or unable to retrieve GPU information")
+            logging.warning("No GPUs found or unable to retrieve GPU information")
 
         return gpu_info
 

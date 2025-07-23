@@ -486,14 +486,15 @@ GPU[3]: AMD Radeon RX 7900 XTX"""
 
     @patch.object(LocalNodeInfo, "has_nvidia_gpus")
     @patch.object(LocalNodeInfo, "has_amd_gpus")
-    def test_get_gpu_generation_and_count_no_gpus(self, mock_has_amd, mock_has_nvidia):
+    @patch("logging.warning")
+    def test_get_gpu_generation_and_count_no_gpus(self, mock_logging, mock_has_amd, mock_has_nvidia):
         """Test get_gpu_generation_and_count with no GPUs available."""
         mock_has_nvidia.return_value = False
         mock_has_amd.return_value = False
 
-        with self.assertRaises(RuntimeError) as context:
-            self.local_node_info.get_gpu_generation_and_count()
-        self.assertIn("No GPUs found", str(context.exception))
+        result = self.local_node_info.get_gpu_generation_and_count()
+        self.assertEqual(result, {})
+        mock_logging.assert_called_with("No GPUs found or unable to retrieve GPU information")
 
     @patch.object(LocalNodeInfo, "get_gpu_generation_and_count")
     def test_has_gpu_type_true(self, mock_get_gpu_info):
