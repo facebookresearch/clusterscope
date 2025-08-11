@@ -22,7 +22,7 @@ filelock==3.18.0
     # via virtualenv
 flake8==7.3.0
     # via clusterscope (pyproject.toml)
-identify==2.6.12
+identify==2.6.13
     # via pre-commit
 libcst==1.8.2
     # via
