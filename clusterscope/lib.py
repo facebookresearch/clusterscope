@@ -10,7 +10,7 @@ from clusterscope.job_info import JobInfo
 
 unified_info = UnifiedInfo()
 local_info = LocalNodeInfo()
-job_info = JobInfo()
+job = JobInfo()
 
 
 def cluster() -> str:
@@ -49,13 +49,3 @@ def mem(
 def local_node_gpu_generation_and_count() -> Dict[str, int]:
     """Get the GPU generation and count for the local node."""
     return local_info.get_gpu_generation_and_count()
-
-
-is_torch_run = job_info.is_torch_run
-is_slurm_job = job_info.is_slurm_job
-job_id = job_info.job_id
-job_name = job_info.job_name
-global_rank = job_info.global_rank
-local_rank = job_info.local_rank
-world_size = job_info.world_size
-is_rank_zero = job_info.is_rank_zero
