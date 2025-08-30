@@ -46,9 +46,9 @@ class JobInfo:
     @lru_cache(maxsize=1)
     def get_local_rank(self) -> int:
         if self.is_slurm_job:
-            return int(os.environ["LOCAL_RANK"])
-        if self.is_torch_run:
             return int(os.environ["SLURM_LOCALID"])
+        if self.is_torch_run:
+            return int(os.environ["LOCAL_RANK"])
         return 0
 
     @lru_cache(maxsize=1)
