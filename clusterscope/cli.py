@@ -9,7 +9,7 @@ import json
 import sys
 from typing import Any, Dict
 
-from clusterscope.cluster_info import UnifiedInfo
+from clusterscope.cluster_info import AWSClusterInfo, UnifiedInfo
 
 
 def format_dict(data: Dict[str, Any]) -> str:
@@ -66,6 +66,7 @@ def main():
 
     try:
         unified_info = UnifiedInfo()
+        aws_cluster_info = AWSClusterInfo()
 
         if args.command == "info":
             cluster_name = unified_info.get_cluster_name()
@@ -125,10 +126,10 @@ def main():
                 print(f"GPU type {gpu_type} is NOT available in the cluster.")
 
         elif args.command == "aws":
-            is_aws = unified_info.is_aws_cluster()
+            is_aws = aws_cluster_info.is_aws_cluster()
             if is_aws:
                 print("This is an AWS cluster.")
-                nccl_settings = unified_info.get_aws_nccl_settings()
+                nccl_settings = aws_cluster_info.get_aws_nccl_settings()
                 print("\nRecommended NCCL settings:")
                 print(format_dict(nccl_settings))
             else:
