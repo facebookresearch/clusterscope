@@ -689,7 +689,7 @@ class SlurmClusterInfo:
             bool: True if the GPU type is available, False otherwise
         """
         gpu_counts = self.get_gpu_generation_and_count()
-        return gpu_type.upper() in gpu_counts
+        return gpu_type.upper() in [k.upper() for k in gpu_counts.keys()]
 
     def get_max_job_lifetime(self) -> str:
         """Get the maximum job lifetime specified in the Slurm configuration.
