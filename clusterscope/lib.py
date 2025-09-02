@@ -6,9 +6,11 @@
 from typing import Dict, Literal, Tuple
 
 from clusterscope.cluster_info import LocalNodeInfo, UnifiedInfo
+from clusterscope.job_info import JobInfo
 
 unified_info = UnifiedInfo()
 local_info = LocalNodeInfo()
+job = JobInfo()
 
 
 def cluster() -> str:

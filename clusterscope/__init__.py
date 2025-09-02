@@ -8,6 +8,7 @@ __version__ = "0.0.0"
 from clusterscope.lib import (
     cluster,
     cpus,
+    job,
     local_node_gpu_generation_and_count,
     mem,
     slurm_version,
@@ -19,4 +20,5 @@ __all__ = [
     "cpus",
     "mem",
     "local_node_gpu_generation_and_count",
+    "job",
 ]
