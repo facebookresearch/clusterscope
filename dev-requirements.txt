@@ -81,7 +81,7 @@ trailrunner==1.4.0
     # via
     #   ufmt
     #   usort
-typing-extensions==4.14.1
+typing-extensions==4.15.0
     # via
     #   black
     #   mypy
