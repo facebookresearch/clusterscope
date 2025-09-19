@@ -3,14 +3,23 @@
 
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
-from typing import Dict, Literal, Tuple
+from typing import Dict, Literal, Optional, Tuple
 
 from clusterscope.cluster_info import LocalNodeInfo, UnifiedInfo
 from clusterscope.job_info import JobInfo
 
 unified_info = UnifiedInfo()
 local_info = LocalNodeInfo()
-job = JobInfo()
+
+# init only if clusterscope is queried for job info
+_job: Optional[JobInfo] = None
+
+
+def get_job() -> JobInfo:
+    global _job
+    if _job is None:
+        _job = JobInfo()
+    return _job
 
 
 def cluster() -> str:
