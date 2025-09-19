@@ -16,7 +16,6 @@ _job: Optional[JobInfo] = None
 
 
 def get_job() -> JobInfo:
-    """Get JobInfo instance, initializing on first call."""
     global _job
     if _job is None:
         _job = JobInfo()
