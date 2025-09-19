@@ -38,25 +38,25 @@ class JobInfo:
     @lru_cache(maxsize=1)
     def get_global_rank(self) -> int:
         if self.is_slurm_job:
-            return int(os.environ.get("SLURM_PROCID", "0"))
+            return int(os.environ["SLURM_PROCID"])
         if self.is_torch_run:
-            return int(os.environ.get("RANK", "0"))
+            return int(os.environ["RANK"])
         return 0
 
     @lru_cache(maxsize=1)
     def get_local_rank(self) -> int:
         if self.is_slurm_job:
-            return int(os.environ.get("SLURM_LOCALID", "0"))
+            return int(os.environ["SLURM_LOCALID"])
         if self.is_torch_run:
-            return int(os.environ.get("LOCAL_RANK", "0"))
+            return int(os.environ["LOCAL_RANK"])
         return 0
 
     @lru_cache(maxsize=1)
     def get_world_size(self) -> int:
         if self.is_torch_run:
-            return int(os.environ.get("WORLD_SIZE", "1"))
+            return int(os.environ["WORLD_SIZE"])
         if self.is_slurm_job:
-            return int(os.environ.get("SLURM_NTASKS", "1"))
+            return int(os.environ["SLURM_NTASKS"])
         return 1
 
     @lru_cache(maxsize=1)
@@ -66,22 +66,17 @@ class JobInfo:
     @lru_cache(maxsize=1)
     def get_master_port(self) -> int:
         if self.is_torch_run:
-            return int(os.environ.get("MASTER_PORT", "29500"))
+            return int(os.environ["MASTER_PORT"])
         rng = random.Random(int(os.environ.get("SLURM_JOB_ID", -1)))
         return rng.randint(MIN_MASTER_PORT, MAX_MASTER_PORT)
 
     @lru_cache(maxsize=1)
     def get_master_addr(self) -> str:
         if self.is_torch_run:
-            return os.environ.get("MASTER_ADDR", "127.0.0.1")
+            return os.environ["MASTER_ADDR"]
         if self.is_slurm_job:
-            try:
-                slurm_job_nodelist = os.environ.get("SLURM_JOB_NODELIST")
-                if slurm_job_nodelist:
-                    hostnames = subprocess.check_output(
-                        ["scontrol", "show", "hostnames", slurm_job_nodelist],
-                    )
-                    return hostnames.split()[0].decode("utf-8")
-            except (subprocess.CalledProcessError, KeyError, IndexError):
-                pass
+            hostnames = subprocess.check_output(
+                ["scontrol", "show", "hostnames", os.environ["SLURM_JOB_NODELIST"]],
+            )
+            return hostnames.split()[0].decode("utf-8")
         return "127.0.0.1"
