@@ -75,7 +75,7 @@ class JobInfo:
 
     @lru_cache(maxsize=1)
     def get_master_port(self) -> int:
-        maybe_master_port = os.environ["MASTER_PORT"]
+        maybe_master_port = os.environ.get("MASTER_PORT")
         if maybe_master_port is not None:
             try:
                 master_port = int(maybe_master_port)
