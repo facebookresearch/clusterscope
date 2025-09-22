@@ -75,8 +75,13 @@ class JobInfo:
 
     @lru_cache(maxsize=1)
     def get_master_port(self) -> int:
-        if self.is_torch_run():
-            return int(os.environ["MASTER_PORT"])
+        maybe_master_port = os.environ.get("MASTER_PORT")
+        if maybe_master_port is not None:
+            try:
+                master_port = int(maybe_master_port)
+            except ValueError:
+                raise RuntimeError(f"master port cannot be parsed. {master_port=}")
+            return master_port
         rng = random.Random(int(os.environ.get("SLURM_JOB_ID", -1)))
         return rng.randint(MIN_MASTER_PORT, MAX_MASTER_PORT)
 
@@ -85,8 +90,17 @@ class JobInfo:
         if self.is_torch_run():
             return os.environ["MASTER_ADDR"]
         if self.is_slurm_job():
-            hostnames = subprocess.check_output(
+            result = subprocess.run(
                 ["scontrol", "show", "hostnames", os.environ["SLURM_JOB_NODELIST"]],
+                capture_output=True,
+                text=True,
             )
-            return hostnames.split()[0].decode("utf-8")
+
+            if result.returncode == 0:
+                if node_list := result.stdout.split("\n"):
+                    return node_list[0]
+
+            raise RuntimeError(
+                f"`scontrol show hostnames` failed: {result.returncode=}, {result.stdout=}, {result.stderr=}"
+            )
         return "127.0.0.1"
