@@ -30,6 +30,8 @@ class JobInfo:
     """
 
     def __init__(self):
+        self.is_torch_run = lambda: "LOCAL_RANK" in os.environ
+        self.is_torchelastic_run = lambda: "TORCHELASTIC_RUN_ID" in os.environ
         self.is_slurm_job = lambda: "SLURM_JOB_ID" in os.environ
         self.job_id = self.get_job_id()
         self.job_name = self.get_job_name()
