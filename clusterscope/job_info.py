@@ -9,13 +9,15 @@ import subprocess
 
 from functools import lru_cache
 
-MIN_MASTER_PORT, MAX_MASTER_PORT = (20000, 60000)
+MIN_MASTER_PORT, MAX_MASTER_PORT = (20_000, 60_000)
 
 
 class JobInfo:
     def __init__(self):
-        self.is_torch_run = os.environ.get("LOCAL_RANK") is not None
-        self.is_slurm_job = "SLURM_JOB_ID" in os.environ and not self.is_torch_run
+        self.is_torch_run = lambda: os.environ.get("LOCAL_RANK") is not None
+        self.is_slurm_job = (
+            lambda: "SLURM_JOB_ID" in os.environ and not self.is_torch_run
+        )
         self.job_id = self.get_job_id()
         self.job_name = self.get_job_name()
         self.global_rank = self.get_global_rank()
@@ -25,37 +27,45 @@ class JobInfo:
 
     @lru_cache(maxsize=1)
     def get_job_id(self) -> int:
-        if self.is_slurm_job:
-            return int(os.environ.get("SLURM_JOB_ID", -1))
+        if self.is_slurm_job():
+            job_id = os.environ.get("SLURM_JOB_ID")
+            # is_slurm_job() checks if SLURM_JOB_ID variable exists in the env.
+            # this assert should always pass, unless something undefines the variable.
+            assert job_id is not None, "SLURM_JOB_ID is not set"
+            try:
+                parsed_job_id = int(job_id)
+            except ValueError:
+                raise RuntimeError(f"Slurm job ID cannot be parsed. {job_id=}")
+            return parsed_job_id
         return 0
 
     @lru_cache(maxsize=1)
     def get_job_name(self) -> str:
-        if self.is_slurm_job:
+        if self.is_slurm_job():
             return os.environ.get("SLURM_JOB_NAME", "")
         return "local"
 
     @lru_cache(maxsize=1)
     def get_global_rank(self) -> int:
-        if self.is_slurm_job:
+        if self.is_slurm_job():
             return int(os.environ["SLURM_PROCID"])
-        if self.is_torch_run:
+        if self.is_torch_run():
             return int(os.environ["RANK"])
         return 0
 
     @lru_cache(maxsize=1)
     def get_local_rank(self) -> int:
-        if self.is_slurm_job:
+        if self.is_slurm_job():
             return int(os.environ["SLURM_LOCALID"])
-        if self.is_torch_run:
+        if self.is_torch_run():
             return int(os.environ["LOCAL_RANK"])
         return 0
 
     @lru_cache(maxsize=1)
     def get_world_size(self) -> int:
-        if self.is_torch_run:
+        if self.is_torch_run():
             return int(os.environ["WORLD_SIZE"])
-        if self.is_slurm_job:
+        if self.is_slurm_job():
             return int(os.environ["SLURM_NTASKS"])
         return 1
 
@@ -65,16 +75,16 @@ class JobInfo:
 
     @lru_cache(maxsize=1)
     def get_master_port(self) -> int:
-        if self.is_torch_run:
+        if self.is_torch_run():
             return int(os.environ["MASTER_PORT"])
         rng = random.Random(int(os.environ.get("SLURM_JOB_ID", -1)))
         return rng.randint(MIN_MASTER_PORT, MAX_MASTER_PORT)
 
     @lru_cache(maxsize=1)
     def get_master_addr(self) -> str:
-        if self.is_torch_run:
+        if self.is_torch_run():
             return os.environ["MASTER_ADDR"]
-        if self.is_slurm_job:
+        if self.is_slurm_job():
             hostnames = subprocess.check_output(
                 ["scontrol", "show", "hostnames", os.environ["SLURM_JOB_NODELIST"]],
             )
