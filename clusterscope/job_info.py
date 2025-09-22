@@ -14,10 +14,8 @@ MIN_MASTER_PORT, MAX_MASTER_PORT = (20_000, 60_000)
 
 class JobInfo:
     def __init__(self):
-        self.is_torch_run = lambda: os.environ.get("LOCAL_RANK") is not None
-        self.is_slurm_job = (
-            lambda: "SLURM_JOB_ID" in os.environ and not self.is_torch_run
-        )
+        self.is_torch_run = lambda: "LOCAL_RANK" in os.environ
+        self.is_slurm_job = lambda: "SLURM_JOB_ID" in os.environ
         self.job_id = self.get_job_id()
         self.job_name = self.get_job_name()
         self.global_rank = self.get_global_rank()
@@ -104,3 +102,15 @@ class JobInfo:
                 f"`scontrol show hostnames` failed: {result.returncode=}, {result.stdout=}, {result.stderr=}"
             )
         return "127.0.0.1"
+
+    def set_torch_distributed_env_from_slurm(self) -> None:
+        if self.is_slurm_job():
+            os.environ["WORLD_SIZE"] = str(os.environ.get("SLURM_NTASKS"))
+            os.environ["RANK"] = str(os.environ.get("SLURM_PROCID"))
+            os.environ["LOCAL_WORLD_SIZE"] = os.environ.get(
+                "SLURM_NTASKS_PER_NODE", "1"
+            )
+            os.environ["LOCAL_RANK"] = str(os.environ.get("SLURM_LOCALID"))
+            os.environ["MASTER_ADDR"] = self.get_master_addr()
+            os.environ["MASTER_PORT"] = str(self.get_master_port())
+            os.environ["CUDA_VISIBLE_DEVICES"] = str(os.environ.get("SLURM_LOCALID"))
