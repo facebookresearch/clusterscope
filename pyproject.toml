@@ -19,7 +19,9 @@ authors = [
   {name = "Lucca Bertoncini", email = "luccab@meta.com"},
   {name = "Kalyan Saladi", email = "skalyan@meta.com"}
 ]
-dependencies = []
+dependencies = [
+  "ray",
+]
 
 [project.scripts]
 cscope = "clusterscope.cli:main"

@@ -13,10 +13,7 @@ from contextlib import closing
 from functools import lru_cache
 from typing import Any, Dict, MutableMapping, Optional, Union
 
-try:
-    import ray
-except ImportError:
-    pass
+import ray
 
 MIN_MASTER_PORT, MAX_MASTER_PORT = (20_000, 60_000)
 
