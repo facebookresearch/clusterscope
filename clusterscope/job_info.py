@@ -11,7 +11,7 @@ import time
 
 from contextlib import closing
 from functools import lru_cache
-from typing import Any, Dict, MutableMapping, Optional
+from typing import Any, Dict, MutableMapping, Optional, Union
 
 try:
     import ray
@@ -37,7 +37,7 @@ class RayCoordinator:
         self.world_size = world_size
 
     def register_worker(
-        self, hostname: str, rank: int, free_port: int | None
+        self, hostname: str, rank: int, free_port: Union[int, None]
     ) -> Dict[str, Any]:
         """Register a worker with its placement group ID and GPU ID"""
         self.ready_workers += 1
@@ -51,7 +51,7 @@ class RayCoordinator:
         self.worker_info[rank] = info
         return info
 
-    def get_leader_info(self) -> Dict[str, Any] | None:
+    def get_leader_info(self) -> Union[Dict[str, Any], None]:
         if self.ready_workers == self.world_size:
             return self.worker_info[0]
         else:
