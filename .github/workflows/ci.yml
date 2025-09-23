@@ -30,10 +30,12 @@ jobs:
 
       - name: print clusterscope version
         run: |
+          make activate
           python -c "import clusterscope; clusterscope.__version__"
 
       - name: initialize clusterscope get_job
         run: |
+          make activate
           python -c "import clusterscope; clusterscope.get_job()"
 
   format:
@@ -144,7 +146,9 @@ jobs:
           make install
 
       - name: Run tests
-        run: python -m unittest discover -s tests
+        run: |
+          make activate
+          python -m unittest discover -s tests
 
   cli-tests:
     env:
