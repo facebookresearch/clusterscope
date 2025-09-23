@@ -8,6 +8,8 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
+    env:
+      UV_SYSTEM_PYTHON: 1
 
     steps:
       - uses: actions/checkout@v4
@@ -30,12 +32,10 @@ jobs:
 
       - name: print clusterscope version
         run: |
-          make activate
           python -c "import clusterscope; clusterscope.__version__"
 
       - name: initialize clusterscope get_job
         run: |
-          make activate
           python -c "import clusterscope; clusterscope.get_job()"
 
   format:
@@ -125,6 +125,8 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
+    env:
+      UV_SYSTEM_PYTHON: 1
 
     steps:
       - uses: actions/checkout@v4
@@ -147,7 +149,6 @@ jobs:
 
       - name: Run tests
         run: |
-          make activate
           python -m unittest discover -s tests
 
   cli-tests:
