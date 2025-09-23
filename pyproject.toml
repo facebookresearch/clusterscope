@@ -26,6 +26,7 @@ cscope = "clusterscope.cli:main"
 
 [project.optional-dependencies]
 dev = [
+  "ray",
   "flake8",
   "black",
   "ufmt",
