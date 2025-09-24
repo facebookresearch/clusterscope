@@ -49,6 +49,7 @@ packaging==25.0
 pathspec==0.12.1
     # via
     #   black
+    #   mypy
     #   trailrunner
 platformdirs==4.4.0
     # via
@@ -62,6 +63,8 @@ pyflakes==3.4.0
     # via flake8
 pyproject-hooks==1.2.0
     # via build
+pytokens==0.1.10
+    # via black
 pyyaml==6.0.2
     # via
     #   libcst
@@ -70,11 +73,6 @@ stdlibs==2025.5.10
     # via usort
 toml==0.10.2
     # via usort
-tomli==2.2.1
-    # via
-    #   black
-    #   build
-    #   mypy
 tomlkit==0.13.2
     # via ufmt
 trailrunner==1.4.0
@@ -83,7 +81,6 @@ trailrunner==1.4.0
     #   usort
 typing-extensions==4.15.0
     # via
-    #   black
     #   mypy
     #   ufmt
 ufmt==2.8.0
