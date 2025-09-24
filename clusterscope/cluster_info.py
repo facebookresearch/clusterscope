@@ -4,6 +4,7 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 import logging
+import os
 import platform
 import shutil
 import subprocess
@@ -101,6 +102,8 @@ class UnifiedInfo:
         """
         if self.is_slurm_cluster:
             return self.slurm_cluster_info.get_cluster_name()
+        if "GITHUB_ACTIONS" in os.environ:
+            return "github"
         return "local-node"
 
     def get_slurm_version(self) -> str:

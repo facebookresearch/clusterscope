@@ -23,7 +23,7 @@ class TestUnifiedInfo(unittest.TestCase):
     def test_get_cluster_name(self):
         unified_info = UnifiedInfo()
         unified_info.is_slurm_cluster = False
-        self.assertEqual(unified_info.get_cluster_name(), "local-node")
+        self.assertIn(unified_info.get_cluster_name(), ["local-node", "github"])
 
     def test_get_gpu_generation_and_count(self):
         unified_info = UnifiedInfo()
