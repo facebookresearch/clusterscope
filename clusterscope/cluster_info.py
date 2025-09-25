@@ -104,6 +104,8 @@ class UnifiedInfo:
             return self.slurm_cluster_info.get_cluster_name()
         if "GITHUB_ACTIONS" in os.environ:
             return "github"
+        if platform.system() == "Darwin":
+            return "macos"
         return "local-node"
 
     def get_slurm_version(self) -> str:
