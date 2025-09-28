@@ -197,7 +197,7 @@ class UnifiedInfo:
         total_gpus = sum(gpu_counts.values())
         return max(total_gpus, 1)  # Ensure at least 1 to avoid division by zero
 
-    def getTaskResourceRequirements(
+    def get_task_resource_requirements(
         self, num_gpus: int, num_tasks_per_node: int = 1
     ) -> ResourceShape:
         """Calculate resource requirements for better GPU packing based on node's GPU configuration.
@@ -206,7 +206,7 @@ class UnifiedInfo:
         For the maximum GPU count, returns all available node resources.
         Returns values in Slurm SBATCH format for direct use in job scripts.
 
-        NOTE: For array jobs, use getArrayJobRequirements() instead, which provides
+        NOTE: For array jobs, use get_array_job_requirements() instead, which provides
         per-array-element resource allocation.
 
         Args:
@@ -270,7 +270,7 @@ class UnifiedInfo:
             tasks_per_node=num_tasks_per_node,
         )
 
-    def getArrayJobRequirements(self, num_gpus_per_task: int) -> ResourceShape:
+    def get_array_job_requirements(self, num_gpus_per_task: int) -> ResourceShape:
         """Calculate resource requirements for array jobs with optimal GPU packing.
 
         For array jobs, each array element gets its own resource allocation.
