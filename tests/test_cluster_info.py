@@ -12,6 +12,7 @@ from clusterscope.cluster_info import (
     DarwinInfo,
     LinuxInfo,
     LocalNodeInfo,
+    ResourceShape,
     run_cli,
     SlurmClusterInfo,
     UnifiedInfo,
@@ -602,6 +603,332 @@ class TestAWSClusterInfo(unittest.TestCase):
         with patch.object(AWSClusterInfo, "is_aws_cluster", return_value=False):
             settings = self.aws_cluster_info.get_aws_nccl_settings()
             self.assertEqual(settings, {})
+
+
+class TestResourceRequirementMethods(unittest.TestCase):
+    """Test cases for getTaskResourceRequirements and getArrayJobRequirements methods."""
+
+    def setUp(self):
+        self.unified_info = UnifiedInfo()
+
+    @patch.object(UnifiedInfo, "get_total_gpus_per_node")
+    @patch.object(UnifiedInfo, "get_cpus_per_node")
+    @patch.object(UnifiedInfo, "get_mem_per_node_MB")
+    def test_getTaskResourceRequirements_single_gpu_8gpu_node(
+        self, mock_mem, mock_cpus, mock_total_gpus
+    ):
+        """Test getTaskResourceRequirements with 1 GPU on an 8-GPU node."""
+        mock_total_gpus.return_value = 8
+        mock_cpus.return_value = 192
+        mock_mem.return_value = 1843200  # 1.8TB in MB
+
+        result = self.unified_info.getTaskResourceRequirements(num_gpus=1)
+
+        self.assertEqual(result.cpu_cores, 24)  # 192/8 = 24
+        self.assertEqual(result.memory, "225G")  # 1843200/8/1024 = 225GB
+        self.assertEqual(result.tasks_per_node, 1)
+
+    @patch.object(UnifiedInfo, "get_total_gpus_per_node")
+    @patch.object(UnifiedInfo, "get_cpus_per_node")
+    @patch.object(UnifiedInfo, "get_mem_per_node_MB")
+    def test_getTaskResourceRequirements_four_gpus_8gpu_node(
+        self, mock_mem, mock_cpus, mock_total_gpus
+    ):
+        """Test getTaskResourceRequirements with 4 GPUs on an 8-GPU node."""
+        mock_total_gpus.return_value = 8
+        mock_cpus.return_value = 192
+        mock_mem.return_value = 1843200
+
+        result = self.unified_info.getTaskResourceRequirements(num_gpus=4)
+
+        self.assertEqual(result.cpu_cores, 96)  # 192/8*4 = 96
+        self.assertEqual(result.memory, "900G")  # 1843200/8*4/1024 = 900GB
+        self.assertEqual(result.tasks_per_node, 1)
+
+    @patch.object(UnifiedInfo, "get_total_gpus_per_node")
+    @patch.object(UnifiedInfo, "get_cpus_per_node")
+    @patch.object(UnifiedInfo, "get_mem_per_node_MB")
+    def test_getTaskResourceRequirements_full_node_8gpu(
+        self, mock_mem, mock_cpus, mock_total_gpus
+    ):
+        """Test getTaskResourceRequirements with all 8 GPUs (full node)."""
+        mock_total_gpus.return_value = 8
+        mock_cpus.return_value = 192
+        mock_mem.return_value = 1843200
+
+        result = self.unified_info.getTaskResourceRequirements(num_gpus=8)
+
+        self.assertEqual(result.cpu_cores, 192)  # All CPUs
+        self.assertEqual(
+            result.memory, "2T"
+        )  # All memory: 1843200/1024/1024 = 1.8TB rounds to 2T
+        self.assertEqual(result.tasks_per_node, 1)
+
+    @patch.object(UnifiedInfo, "get_total_gpus_per_node")
+    @patch.object(UnifiedInfo, "get_cpus_per_node")
+    @patch.object(UnifiedInfo, "get_mem_per_node_MB")
+    def test_getTaskResourceRequirements_4gpu_node_configuration(
+        self, mock_mem, mock_cpus, mock_total_gpus
+    ):
+        """Test getTaskResourceRequirements on a 4-GPU node configuration."""
+        mock_total_gpus.return_value = 4
+        mock_cpus.return_value = 64
+        mock_mem.return_value = 524288  # 512GB in MB
+
+        # Test 1 GPU on 4-GPU node
+        result = self.unified_info.getTaskResourceRequirements(num_gpus=1)
+        self.assertEqual(result.cpu_cores, 16)  # 64/4 = 16
+        self.assertEqual(result.memory, "128G")  # 524288/4/1024 = 128GB
+
+        # Test full 4-GPU node
+        result = self.unified_info.getTaskResourceRequirements(num_gpus=4)
+        self.assertEqual(result.cpu_cores, 64)  # All CPUs
+        self.assertEqual(result.memory, "512G")  # All memory
+
+    @patch.object(UnifiedInfo, "get_total_gpus_per_node")
+    @patch.object(UnifiedInfo, "get_cpus_per_node")
+    @patch.object(UnifiedInfo, "get_mem_per_node_MB")
+    def test_getResRequirements_with_multiple_tasks_per_node(
+        self, mock_mem, mock_cpus, mock_total_gpus
+    ):
+        """Test getResRequirements with multiple tasks per node."""
+        mock_total_gpus.return_value = 8
+        mock_cpus.return_value = 192
+        mock_mem.return_value = 1843200
+
+        result = self.unified_info.getTaskResourceRequirements(
+            num_gpus=4, num_tasks_per_node=2
+        )
+
+        self.assertEqual(result.cpu_cores, 48)  # (192/8*4)/2 = 48 per task
+        self.assertEqual(result.memory, "900G")  # Memory is per node, not per task
+        self.assertEqual(result.tasks_per_node, 2)
+
+    @patch.object(UnifiedInfo, "get_total_gpus_per_node")
+    @patch.object(UnifiedInfo, "get_cpus_per_node")
+    @patch.object(UnifiedInfo, "get_mem_per_node_MB")
+    def test_getTaskResourceRequirements_memory_terabyte_format(
+        self, mock_mem, mock_cpus, mock_total_gpus
+    ):
+        """Test getTaskResourceRequirements returns TB format for very large memory."""
+        mock_total_gpus.return_value = 8
+        mock_cpus.return_value = 192
+        mock_mem.return_value = 8388608  # 8TB in MB
+
+        result = self.unified_info.getTaskResourceRequirements(num_gpus=8)
+
+        self.assertEqual(result.memory, "8T")  # 8388608/1024/1024 = 8TB
+
+    @patch.object(UnifiedInfo, "get_total_gpus_per_node")
+    @patch.object(UnifiedInfo, "get_cpus_per_node")
+    @patch.object(UnifiedInfo, "get_mem_per_node_MB")
+    def test_getTaskResourceRequirements_cpu_rounding_up(
+        self, mock_mem, mock_cpus, mock_total_gpus
+    ):
+        """Test getTaskResourceRequirements rounds up CPU cores when fractional."""
+        mock_total_gpus.return_value = 8
+        mock_cpus.return_value = 191  # Odd number that doesn't divide evenly
+        mock_mem.return_value = 1843200
+
+        result = self.unified_info.getTaskResourceRequirements(num_gpus=1)
+
+        # 191/8 = 23.875, should round up to 24
+        self.assertEqual(result.cpu_cores, 24)
+
+    @patch.object(UnifiedInfo, "get_total_gpus_per_node")
+    def test_getResRequirements_invalid_num_gpus(self, mock_total_gpus):
+        """Test getResRequirements raises ValueError for invalid num_gpus."""
+        mock_total_gpus.return_value = 8
+
+        # Test zero GPUs
+        with self.assertRaises(ValueError) as context:
+            self.unified_info.getTaskResourceRequirements(num_gpus=0)
+        self.assertIn("num_gpus must be between 1 and 8", str(context.exception))
+
+        # Test more than max GPUs
+        with self.assertRaises(ValueError) as context:
+            self.unified_info.getTaskResourceRequirements(num_gpus=9)
+        self.assertIn("num_gpus must be between 1 and 8", str(context.exception))
+
+    @patch.object(UnifiedInfo, "get_total_gpus_per_node")
+    def test_getResRequirements_invalid_num_tasks_per_node(self, mock_total_gpus):
+        """Test getResRequirements raises ValueError for invalid num_tasks_per_node."""
+        mock_total_gpus.return_value = 8
+
+        with self.assertRaises(ValueError) as context:
+            self.unified_info.getTaskResourceRequirements(
+                num_gpus=1, num_tasks_per_node=0
+            )
+        self.assertIn("num_tasks_per_node must be at least 1", str(context.exception))
+
+    @patch.object(UnifiedInfo, "get_total_gpus_per_node")
+    @patch.object(UnifiedInfo, "get_cpus_per_node")
+    @patch.object(UnifiedInfo, "get_mem_per_node_MB")
+    def test_getArrayJobRequirements_single_gpu(
+        self, mock_mem, mock_cpus, mock_total_gpus
+    ):
+        """Test getArrayJobRequirements with 1 GPU per task."""
+        mock_total_gpus.return_value = 8
+        mock_cpus.return_value = 192
+        mock_mem.return_value = 1843200
+
+        result = self.unified_info.getArrayJobRequirements(num_gpus_per_task=1)
+
+        self.assertEqual(result.cpu_cores, 24)  # 192/8 = 24
+        self.assertEqual(result.memory, "225G")  # 1843200/8/1024 = 225GB
+        self.assertEqual(result.tasks_per_node, 1)  # Always 1 for array jobs
+
+    @patch.object(UnifiedInfo, "get_total_gpus_per_node")
+    @patch.object(UnifiedInfo, "get_cpus_per_node")
+    @patch.object(UnifiedInfo, "get_mem_per_node_MB")
+    def test_getArrayJobRequirements_multiple_gpus(
+        self, mock_mem, mock_cpus, mock_total_gpus
+    ):
+        """Test getArrayJobRequirements with multiple GPUs per task."""
+        mock_total_gpus.return_value = 8
+        mock_cpus.return_value = 192
+        mock_mem.return_value = 1843200
+
+        result = self.unified_info.getArrayJobRequirements(num_gpus_per_task=4)
+
+        self.assertEqual(result.cpu_cores, 96)  # 192/8*4 = 96
+        self.assertEqual(result.memory, "900G")  # 1843200/8*4/1024 = 900GB
+        self.assertEqual(result.tasks_per_node, 1)
+
+    @patch.object(UnifiedInfo, "get_total_gpus_per_node")
+    @patch.object(UnifiedInfo, "get_cpus_per_node")
+    @patch.object(UnifiedInfo, "get_mem_per_node_MB")
+    def test_getArrayJobRequirements_full_node(
+        self, mock_mem, mock_cpus, mock_total_gpus
+    ):
+        """Test getArrayJobRequirements with all GPUs (full node per task)."""
+        mock_total_gpus.return_value = 8
+        mock_cpus.return_value = 192
+        mock_mem.return_value = 1843200
+
+        result = self.unified_info.getArrayJobRequirements(num_gpus_per_task=8)
+
+        self.assertEqual(result.cpu_cores, 192)  # All CPUs
+        self.assertEqual(
+            result.memory, "2T"
+        )  # All memory: 1843200/1024/1024 = 1.8TB rounds to 2T
+        self.assertEqual(result.tasks_per_node, 1)
+
+    @patch.object(UnifiedInfo, "get_total_gpus_per_node")
+    @patch.object(UnifiedInfo, "get_cpus_per_node")
+    @patch.object(UnifiedInfo, "get_mem_per_node_MB")
+    def test_getArrayJobRequirements_4gpu_node(
+        self, mock_mem, mock_cpus, mock_total_gpus
+    ):
+        """Test getArrayJobRequirements on a 4-GPU node configuration."""
+        mock_total_gpus.return_value = 4
+        mock_cpus.return_value = 64
+        mock_mem.return_value = 524288
+
+        result = self.unified_info.getArrayJobRequirements(num_gpus_per_task=2)
+
+        self.assertEqual(result.cpu_cores, 32)  # 64/4*2 = 32
+        self.assertEqual(result.memory, "256G")  # 524288/4*2/1024 = 256GB
+        self.assertEqual(result.tasks_per_node, 1)
+
+    @patch.object(UnifiedInfo, "get_total_gpus_per_node")
+    def test_getArrayJobRequirements_invalid_num_gpus_per_task(self, mock_total_gpus):
+        """Test getArrayJobRequirements raises ValueError for invalid num_gpus_per_task."""
+        mock_total_gpus.return_value = 8
+
+        # Test zero GPUs
+        with self.assertRaises(ValueError) as context:
+            self.unified_info.getArrayJobRequirements(num_gpus_per_task=0)
+        self.assertIn(
+            "num_gpus_per_task must be between 1 and 8", str(context.exception)
+        )
+
+        # Test more than max GPUs
+        with self.assertRaises(ValueError) as context:
+            self.unified_info.getArrayJobRequirements(num_gpus_per_task=9)
+        self.assertIn(
+            "num_gpus_per_task must be between 1 and 8", str(context.exception)
+        )
+
+    @patch.object(UnifiedInfo, "get_gpu_generation_and_count")
+    def test_get_total_gpus_per_node_with_gpus(self, mock_gpu_info):
+        """Test get_total_gpus_per_node with actual GPU detection."""
+        mock_gpu_info.return_value = {"A100": 4, "V100": 4}
+
+        result = self.unified_info.get_total_gpus_per_node()
+        self.assertEqual(result, 8)  # 4 + 4 = 8
+
+    @patch.object(UnifiedInfo, "get_gpu_generation_and_count")
+    def test_get_total_gpus_per_node_no_gpus_detected(self, mock_gpu_info):
+        """Test get_total_gpus_per_node defaults to 8 when no GPUs detected."""
+        mock_gpu_info.return_value = {}
+
+        result = self.unified_info.get_total_gpus_per_node()
+        self.assertEqual(result, 8)  # Default fallback
+
+    @patch.object(UnifiedInfo, "get_gpu_generation_and_count")
+    def test_get_total_gpus_per_node_single_gpu_type(self, mock_gpu_info):
+        """Test get_total_gpus_per_node with single GPU type."""
+        mock_gpu_info.return_value = {"A100": 8}
+
+        result = self.unified_info.get_total_gpus_per_node()
+        self.assertEqual(result, 8)
+
+    @patch.object(UnifiedInfo, "get_gpu_generation_and_count")
+    def test_get_total_gpus_per_node_mixed_gpu_types(self, mock_gpu_info):
+        """Test get_total_gpus_per_node with mixed GPU types."""
+        mock_gpu_info.return_value = {"A100": 2, "V100": 4, "P100": 2}
+
+        result = self.unified_info.get_total_gpus_per_node()
+        self.assertEqual(result, 8)  # 2 + 4 + 2 = 8
+
+    @patch.object(UnifiedInfo, "get_total_gpus_per_node")
+    @patch.object(UnifiedInfo, "get_cpus_per_node")
+    @patch.object(UnifiedInfo, "get_mem_per_node_MB")
+    def test_dynamic_gpu_boundary_validation(
+        self, mock_mem, mock_cpus, mock_total_gpus
+    ):
+        """Test that validation boundaries adapt to detected GPU count."""
+        # Test with 4-GPU node
+        mock_total_gpus.return_value = 4
+        mock_cpus.return_value = 64
+        mock_mem.return_value = 524288
+
+        # Valid requests for 4-GPU node
+        result = self.unified_info.getTaskResourceRequirements(num_gpus=1)
+        self.assertIsInstance(result, ResourceShape)
+
+        result = self.unified_info.getTaskResourceRequirements(num_gpus=4)
+        self.assertIsInstance(result, ResourceShape)
+
+        # Invalid request (more than available)
+        with self.assertRaises(ValueError) as context:
+            self.unified_info.getTaskResourceRequirements(num_gpus=5)
+        self.assertIn("num_gpus must be between 1 and 4", str(context.exception))
+
+        # Test with 16-GPU node
+        mock_total_gpus.return_value = 16
+
+        # Should now accept up to 16 GPUs
+        result = self.unified_info.getTaskResourceRequirements(num_gpus=16)
+        self.assertIsInstance(result, ResourceShape)
+
+        # But not 17
+        with self.assertRaises(ValueError) as context:
+            self.unified_info.getTaskResourceRequirements(num_gpus=17)
+        self.assertIn("num_gpus must be between 1 and 16", str(context.exception))
+
+    def test_resource_shape_namedtuple(self):
+        """Test ResourceShape NamedTuple structure."""
+        resource = ResourceShape(cpu_cores=24, memory="225G", tasks_per_node=1)
+
+        self.assertEqual(resource.cpu_cores, 24)
+        self.assertEqual(resource.memory, "225G")
+        self.assertEqual(resource.tasks_per_node, 1)
+
+        # Test that it's immutable (characteristic of NamedTuple)
+        with self.assertRaises(AttributeError):
+            resource.cpu_cores = 48
 
 
 if __name__ == "__main__":
