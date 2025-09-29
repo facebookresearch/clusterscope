@@ -22,6 +22,16 @@ def main():
     parser = argparse.ArgumentParser(
         description="Command-line tool to query Slurm cluster information"
     )
+
+    # Add global partition argument
+    parser.add_argument(
+        "-p",
+        "--partition",
+        type=str,
+        default=None,
+        help="Slurm partition name to filter queries (optional)",
+    )
+
     subparsers = parser.add_subparsers(dest="command", help="Command to execute")
 
     # Info command
@@ -65,7 +75,7 @@ def main():
         return 1
 
     try:
-        unified_info = UnifiedInfo()
+        unified_info = UnifiedInfo(partition=args.partition)
         aws_cluster_info = AWSClusterInfo()
 
         if args.command == "info":

@@ -11,7 +11,7 @@ import shutil
 import subprocess
 from collections import defaultdict
 from functools import lru_cache
-from typing import Dict, List, NamedTuple, Set, Union
+from typing import Dict, List, NamedTuple, Optional, Set, Union
 
 from clusterscope.cache import fs_cache
 
@@ -96,9 +96,16 @@ def run_cli(
 
 
 class UnifiedInfo:
-    def __init__(self):
+    def __init__(self, partition: Optional[str] = None):
+        """Initialize the UnifiedInfo instance.
+
+        Args:
+            partition (str, optional): Slurm partition name to filter queries.
+                                     If None, queries all partitions.
+        """
+        self.partition = partition
         self.local_node_info = LocalNodeInfo()
-        self.slurm_cluster_info = SlurmClusterInfo()
+        self.slurm_cluster_info = SlurmClusterInfo(partition=partition)
         self.is_slurm_cluster = self.slurm_cluster_info.verify_slurm_available()
         self.has_nvidia_gpus = self.local_node_info.has_nvidia_gpus()
         self.has_amd_gpus = self.local_node_info.has_amd_gpus()
@@ -654,8 +661,14 @@ class SlurmClusterInfo:
     such as cluster name, available resources, and node configurations.
     """
 
-    def __init__(self):
-        """Initialize the Cluster instance."""
+    def __init__(self, partition: Optional[str] = None):
+        """Initialize the Cluster instance.
+
+        Args:
+            partition (str, optional): Slurm partition name to filter queries.
+                                     If None, queries all partitions.
+        """
+        self.partition = partition
         self.is_slurm_cluster = False
         if shutil.which("sinfo") is not None:
             self.is_slurm_cluster = self.verify_slurm_available()
@@ -733,8 +746,12 @@ class SlurmClusterInfo:
             RuntimeError: If unable to retrieve node information.
         """
         try:
+            cmd = ["sinfo", "-o", "%100m", "--noconvert", "--noheader"]
+            if self.partition:
+                cmd.extend(["-p", self.partition])
+
             result = subprocess.run(
-                ["sinfo", "-o", "%100m", "--noconvert", "--noheader"],
+                cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
@@ -761,8 +778,12 @@ class SlurmClusterInfo:
             RuntimeError: If unable to retrieve node information or if nodes have different CPU counts.
         """
         try:
+            cmd = ["sinfo", "-o", "%100c", "--noheader"]
+            if self.partition:
+                cmd.extend(["-p", self.partition])
+
             result = subprocess.run(
-                ["sinfo", "-o", "%100c", "--noheader"],
+                cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
@@ -787,8 +808,12 @@ class SlurmClusterInfo:
         """
         try:
             # Run sinfo command
+            cmd = ["sinfo", "-o", "%G"]
+            if self.partition:
+                cmd.extend(["-p", self.partition])
+
             result = subprocess.run(
-                ["sinfo", "-o", "%G"],
+                cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
@@ -807,8 +832,8 @@ class SlurmClusterInfo:
 
             return gpu_info
         except (subprocess.SubprocessError, FileNotFoundError) as e:
-            logging.error(f"Failed to get CPU information: {str(e)}")
-            raise RuntimeError(f"Failed to get CPU information: {str(e)}")
+            logging.error(f"Failed to get GPU information: {str(e)}")
+            raise RuntimeError(f"Failed to get GPU information: {str(e)}")
 
     def get_gpu_generations(self) -> Set[str]:
         """Get the set of GPU generations available in the cluster.
@@ -820,8 +845,12 @@ class SlurmClusterInfo:
             RuntimeError: If unable to retrieve GPU information.
         """
         try:
+            cmd = ["sinfo", "-o", "%G"]
+            if self.partition:
+                cmd.extend(["-p", self.partition])
+
             result = subprocess.run(
-                ["sinfo", "-o", "%G"],
+                cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
@@ -858,6 +887,9 @@ class SlurmClusterInfo:
 
     def get_max_job_lifetime(self) -> str:
         """Get the maximum job lifetime specified in the Slurm configuration.
+
+        Note: MaxJobTime is a global configuration setting, not partition-specific,
+        so the partition parameter doesn't affect this method.
 
         Returns:
             str: The maximum job lifetime in the format "days-hours:minutes:seconds".
