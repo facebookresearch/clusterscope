@@ -26,11 +26,21 @@ class TestUnifiedInfo(unittest.TestCase):
         unified_info.is_slurm_cluster = False
         self.assertIn(unified_info.get_cluster_name(), ["local-node", "github"])
 
+    def test_get_cluster_name_with_partition(self):
+        unified_info = UnifiedInfo(partition="gpu_partition")
+        unified_info.is_slurm_cluster = False
+        self.assertIn(unified_info.get_cluster_name(), ["local-node", "github"])
+        self.assertEqual(unified_info.partition, "gpu_partition")
+
     def test_get_gpu_generation_and_count(self):
         unified_info = UnifiedInfo()
         unified_info.is_slurm_cluster = False
         unified_info.has_nvidia_gpus = False
         self.assertEqual(unified_info.get_gpu_generation_and_count(), {})
+
+    def test_partition_passed_to_slurm_cluster_info(self):
+        unified_info = UnifiedInfo(partition="test_partition")
+        self.assertEqual(unified_info.slurm_cluster_info.partition, "test_partition")
 
 
 class TestLinuxInfo(unittest.TestCase):
@@ -68,6 +78,7 @@ class TestDarwinInfo(unittest.TestCase):
 class TestSlurmClusterInfo(unittest.TestCase):
     def setUp(self):
         self.cluster_info = SlurmClusterInfo()
+        self.cluster_info_with_partition = SlurmClusterInfo(partition="test_partition")
 
     @patch("subprocess.run")
     def test_get_cluster_name(self, mock_run):
@@ -84,10 +95,52 @@ class TestSlurmClusterInfo(unittest.TestCase):
         self.assertEqual(self.cluster_info.get_cpus_per_node(), 128)
 
     @patch("subprocess.run")
+    @patch("clusterscope.cache.load", return_value={})  # Mock empty cache
+    @patch("clusterscope.cache.save")  # Mock cache save function
+    def test_get_cpu_per_node_with_partition(self, mock_save, mock_load, mock_run):
+        # Mock successful CPU per node retrieval with partition
+        mock_run.return_value = MagicMock(stdout="128", returncode=0)
+        result = self.cluster_info_with_partition.get_cpus_per_node()
+        self.assertEqual(result, 128)
+        # Verify that partition argument was passed to subprocess.run
+        mock_run.assert_called_with(
+            ["sinfo", "-o", "%100c", "--noheader", "-p", "test_partition"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=True,
+        )
+
+    @patch("subprocess.run")
     def test_get_mem_per_node_MB(self, mock_run):
         # Mock successful cluster name retrieval
         mock_run.return_value = MagicMock(stdout="123456+", returncode=0)
         self.assertEqual(self.cluster_info.get_mem_per_node_MB(), 123456)
+
+    @patch("subprocess.run")
+    @patch("clusterscope.cache.load", return_value={})  # Mock empty cache
+    @patch("clusterscope.cache.save")  # Mock cache save function
+    def test_get_mem_per_node_MB_with_partition(self, mock_save, mock_load, mock_run):
+        # Mock successful memory per node retrieval with partition
+        mock_run.return_value = MagicMock(stdout="123456+", returncode=0)
+        result = self.cluster_info_with_partition.get_mem_per_node_MB()
+        self.assertEqual(result, 123456)
+        # Verify that partition argument was passed to subprocess.run
+        mock_run.assert_called_with(
+            [
+                "sinfo",
+                "-o",
+                "%100m",
+                "--noconvert",
+                "--noheader",
+                "-p",
+                "test_partition",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=True,
+        )
 
     @patch("subprocess.run")
     def test_get_max_job_lifetime(self, mock_run):
@@ -145,6 +198,48 @@ class TestSlurmClusterInfo(unittest.TestCase):
         # Call the method and check the result
         result = cluster_info.get_gpu_generations()
         self.assertEqual(result, set())  # Should return an empty set
+
+    @patch("subprocess.run")
+    def test_get_gpu_generations_with_partition(self, mock_run):
+        # Mock successful GPU generations retrieval with partition
+        mock_run.return_value = MagicMock(
+            stdout="GRES\ngres:gpu:a100:4\ngres:gpu:v100:2\n",
+            returncode=0,
+        )
+
+        result = self.cluster_info_with_partition.get_gpu_generations()
+        expected = {"A100", "V100"}
+        self.assertEqual(result, expected)
+
+        # Verify that partition argument was passed to subprocess.run
+        mock_run.assert_called_with(
+            ["sinfo", "-o", "%G", "-p", "test_partition"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=True,
+        )
+
+    @patch("subprocess.run")
+    def test_get_gpu_generation_and_count_with_partition(self, mock_run):
+        # Mock successful GPU generation and count retrieval with partition
+        mock_run.return_value = MagicMock(
+            stdout="gpu:a100:4(S:0-1)\ngpu:v100:2(S:0)\n",
+            returncode=0,
+        )
+
+        result = self.cluster_info_with_partition.get_gpu_generation_and_count()
+        expected = {"a100": 4, "v100": 2}
+        self.assertEqual(result, expected)
+
+        # Verify that partition argument was passed to subprocess.run
+        mock_run.assert_called_with(
+            ["sinfo", "-o", "%G", "-p", "test_partition"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=True,
+        )
 
     @patch("subprocess.run")
     def test_get_gpu_generations_error(self, mock_run):

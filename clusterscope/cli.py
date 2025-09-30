@@ -25,9 +25,15 @@ def cli():
 
 
 @cli.command()
-def info():
+@click.option(
+    "--partition",
+    type=str,
+    default=None,
+    help="Slurm partition name to filter queries (optional)",
+)
+def info(partition: str):
     """Show basic cluster information."""
-    unified_info = UnifiedInfo()
+    unified_info = UnifiedInfo(partition=partition)
     cluster_name = unified_info.get_cluster_name()
     slurm_version = unified_info.get_slurm_version()
     click.echo(f"Cluster Name: {cluster_name}")
@@ -35,30 +41,48 @@ def info():
 
 
 @cli.command()
-def cpus():
+@click.option(
+    "--partition",
+    type=str,
+    default=None,
+    help="Slurm partition name to filter queries (optional)",
+)
+def cpus(partition: str):
     """Show CPU counts per node."""
-    unified_info = UnifiedInfo()
+    unified_info = UnifiedInfo(partition=partition)
     cpus_per_node = unified_info.get_cpus_per_node()
     click.echo("CPU counts per node:")
     click.echo(cpus_per_node)
 
 
 @cli.command()
-def mem():
+@click.option(
+    "--partition",
+    type=str,
+    default=None,
+    help="Slurm partition name to filter queries (optional)",
+)
+def mem(partition: str):
     """Show memory information per node."""
-    unified_info = UnifiedInfo()
+    unified_info = UnifiedInfo(partition=partition)
     mem_per_node = unified_info.get_mem_per_node_MB()
     click.echo("Mem per node MB:")
     click.echo(mem_per_node)
 
 
 @cli.command()
+@click.option(
+    "--partition",
+    type=str,
+    default=None,
+    help="Slurm partition name to filter queries (optional)",
+)
 @click.option("--generations", is_flag=True, help="Show only GPU generations")
 @click.option("--counts", is_flag=True, help="Show only GPU counts by type")
 @click.option("--vendor", is_flag=True, help="Show GPU vendor information")
-def gpus(generations, counts, vendor):
+def gpus(partition: str, generations: bool, counts: bool, vendor: bool):
     """Show GPU information."""
-    unified_info = UnifiedInfo()
+    unified_info = UnifiedInfo(partition=partition)
 
     if vendor:
         vendor_info = unified_info.get_gpu_vendor()
@@ -95,12 +119,18 @@ def gpus(generations, counts, vendor):
 
 @cli.command(name="check-gpu")
 @click.argument("gpu_type")
-def check_gpu(gpu_type):
+@click.option(
+    "--partition",
+    type=str,
+    default=None,
+    help="Slurm partition name to filter queries (optional)",
+)
+def check_gpu(gpu_type: str, partition: str):
     """Check if a specific GPU type exists.
 
     GPU_TYPE: GPU type to check for (e.g., A100, MI300X)
     """
-    unified_info = UnifiedInfo()
+    unified_info = UnifiedInfo(partition=partition)
     has_gpu = unified_info.has_gpu_type(gpu_type)
     if has_gpu:
         click.echo(f"GPU type {gpu_type} is available in the cluster.")
@@ -143,9 +173,15 @@ def job_gen():
     default="json",
     help="Format to output the job requirements in",
 )
-def task(num_gpus: int, num_tasks_per_node: int, output_format: str):
+@click.option(
+    "--partition",
+    type=str,
+    default=None,
+    help="Slurm partition name to filter queries (optional)",
+)
+def task(num_gpus: int, num_tasks_per_node: int, output_format: str, partition: str):
     """Generate job requirements for a task job."""
-    unified_info = UnifiedInfo()
+    unified_info = UnifiedInfo(partition=partition)
     job_requirements = unified_info.get_task_resource_requirements(
         num_gpus=num_gpus,
         num_tasks_per_node=num_tasks_per_node,
@@ -172,9 +208,15 @@ def task(num_gpus: int, num_tasks_per_node: int, output_format: str):
     default="json",
     help="Format to output the job requirements in",
 )
-def array(num_gpus_per_task: int, output_format: str):
+@click.option(
+    "--partition",
+    type=str,
+    default=None,
+    help="Slurm partition name to filter queries (optional)",
+)
+def array(num_gpus_per_task: int, output_format: str, partition: str):
     """Generate job requirements for an array job."""
-    unified_info = UnifiedInfo()
+    unified_info = UnifiedInfo(partition=partition)
     job_requirements = unified_info.get_array_job_requirements(
         num_gpus_per_task=num_gpus_per_task,
     )
