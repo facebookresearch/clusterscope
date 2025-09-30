@@ -58,6 +58,35 @@ def main():
         "aws", help="Check if running on AWS and show NCCL settings"
     )
 
+    # Job generation
+    job_gen_parser = subparsers.add_parser(
+        "job-gen", help="Generate job requirements for a given job spec"
+    )
+    job_gen_parser.add_argument(
+        "--job-type",
+        choices=["task", "array"],
+        default="task",
+        help="Type of the job to generate requirements for",
+    )
+    job_gen_parser.add_argument(
+        "--num-gpus", help="Number of GPUs to request", type=int
+    )
+    job_gen_parser.add_argument(
+        "--num-tasks-per-node",
+        help="Number of tasks per node to request",
+        type=int,
+        default=1,
+    )
+    job_gen_parser.add_argument(
+        "--num-gpus-per-task", help="Number of GPUs per task", type=int
+    )
+    job_gen_parser.add_argument(
+        "--format",
+        choices=["json", "sbatch", "srun", "submitit"],
+        default="json",
+        help="Format to output the job requirements in",
+    )
+
     args = parser.parse_args()
 
     if not args.command:
@@ -135,6 +164,31 @@ def main():
             else:
                 print("This is NOT an AWS cluster.")
 
+        elif args.command == "job-gen":
+            if args.job_type == "task":
+                if args.num_gpus is None:
+                    raise ValueError("Must specify --num-gpus for task jobs")
+                job_requirements = unified_info.get_task_resource_requirements(
+                    num_gpus=args.num_gpus,
+                    num_tasks_per_node=args.num_tasks_per_node,
+                )
+            elif args.job_type == "array":
+                if args.num_gpus_per_task is None:
+                    raise ValueError("Must specify --num-gpus-per-task for array jobs")
+                job_requirements = unified_info.get_array_job_requirements(
+                    num_gpus_per_task=args.num_gpus_per_task,
+                )
+            else:
+                raise ValueError(f"Unknown job type: {args.job_type}, see --help")
+
+            # Route to the correct format method based on CLI option
+            format_methods = {
+                "json": job_requirements.to_json,
+                "sbatch": job_requirements.to_sbatch,
+                "srun": job_requirements.to_srun,
+                "submitit": job_requirements.to_submitit,
+            }
+            print(format_methods[args.format]())
         return 0
 
     except RuntimeError as e:
