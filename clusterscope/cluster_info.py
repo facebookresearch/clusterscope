@@ -3,6 +3,7 @@
 
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
+import json
 import logging
 import math
 import os
@@ -22,6 +23,79 @@ class ResourceShape(NamedTuple):
     cpu_cores: int
     memory: str
     tasks_per_node: int
+
+    def _parse_memory_to_gb(self) -> int:
+        """Parse memory string and convert to GB.
+
+        Returns:
+            int: Memory in GB
+        """
+        mem_value = self.memory.rstrip("GT")
+        if self.memory.endswith("T"):
+            return int(mem_value) * 1024
+        elif self.memory.endswith("G"):
+            return int(mem_value)
+        else:
+            raise RuntimeError(f"Invalid memory format: {self.memory}")
+
+    def to_json(self) -> str:
+        """Convert ResourceShape to JSON format.
+
+        Returns:
+            str: JSON representation of the resource requirements
+        """
+        mem_gb = self._parse_memory_to_gb()
+
+        data = {
+            "cpu_cores": self.cpu_cores,
+            "memory": self.memory,
+            "tasks_per_node": self.tasks_per_node,
+            "mem_gb": mem_gb,
+        }
+        return json.dumps(data, indent=2)
+
+    def to_sbatch(self) -> str:
+        """Convert ResourceShape to SBATCH script format.
+
+        Returns:
+            str: SBATCH script with resource directives
+        """
+        lines = [
+            "#!/bin/bash",
+            f"#SBATCH --cpus-per-task={self.cpu_cores}",
+            f"#SBATCH --mem={self.memory}",
+            f"#SBATCH --ntasks-per-node={self.tasks_per_node}",
+        ]
+        return "\n".join(lines)
+
+    def to_srun(self) -> str:
+        """Convert ResourceShape to srun command format.
+
+        Returns:
+            str: srun command with resource specifications
+        """
+        cmd_parts = [
+            "srun",
+            f"--cpus-per-task={self.cpu_cores}",
+            f"--mem={self.memory}",
+            f"--ntasks-per-node={self.tasks_per_node}",
+        ]
+        return " ".join(cmd_parts)
+
+    def to_submitit(self) -> str:
+        """Convert ResourceShape to submitit parameters format.
+
+        Returns:
+            str: JSON representation of submitit parameters
+        """
+        mem_gb = self._parse_memory_to_gb()
+
+        params = {
+            "cpus_per_task": self.cpu_cores,
+            "mem_gb": mem_gb,
+            "tasks_per_node": self.tasks_per_node,
+        }
+        return json.dumps(params, indent=2)
 
 
 # Common NVIDIA GPU types
