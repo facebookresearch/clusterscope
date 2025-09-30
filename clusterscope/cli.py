@@ -58,43 +58,39 @@ def mem():
 @click.option("--vendor", is_flag=True, help="Show GPU vendor information")
 def gpus(generations, counts, vendor):
     """Show GPU information."""
-    try:
-        unified_info = UnifiedInfo()
+    unified_info = UnifiedInfo()
 
-        if vendor:
-            vendor_info = unified_info.get_gpu_vendor()
-            click.echo(f"Primary GPU vendor: {vendor_info}")
-        elif counts:
-            gpu_counts = unified_info.get_gpu_generation_and_count()
-            if gpu_counts:
-                click.echo("GPU counts by type:")
-                for gpu_type, count in sorted(gpu_counts.items()):
-                    click.echo(f"  {gpu_type}: {count}")
-            else:
-                click.echo("No GPUs found")
-        elif generations:
-            gpu_counts = unified_info.get_gpu_generation_and_count()
-            if gpu_counts:
-                click.echo("GPU generations available:")
-                for gen in sorted(gpu_counts.keys()):
-                    click.echo(f"- {gen}")
-            else:
-                click.echo("No GPUs found")
+    if vendor:
+        vendor_info = unified_info.get_gpu_vendor()
+        click.echo(f"Primary GPU vendor: {vendor_info}")
+    elif counts:
+        gpu_counts = unified_info.get_gpu_generation_and_count()
+        if gpu_counts:
+            click.echo("GPU counts by type:")
+            for gpu_type, count in sorted(gpu_counts.items()):
+                click.echo(f"  {gpu_type}: {count}")
         else:
-            # Default: show both vendor and detailed info
-            vendor_info = unified_info.get_gpu_vendor()
-            gpu_counts = unified_info.get_gpu_generation_and_count()
+            click.echo("No GPUs found")
+    elif generations:
+        gpu_counts = unified_info.get_gpu_generation_and_count()
+        if gpu_counts:
+            click.echo("GPU generations available:")
+            for gen in sorted(gpu_counts.keys()):
+                click.echo(f"- {gen}")
+        else:
+            click.echo("No GPUs found")
+    else:
+        # Default: show both vendor and detailed info
+        vendor_info = unified_info.get_gpu_vendor()
+        gpu_counts = unified_info.get_gpu_generation_and_count()
 
-            click.echo(f"GPU vendor: {vendor_info}")
-            if gpu_counts:
-                click.echo("GPU information:")
-                for gpu_type, count in sorted(gpu_counts.items()):
-                    click.echo(f"  {gpu_type}: {count}")
-            else:
-                click.echo("No GPUs found")
-    except RuntimeError as e:
-        click.echo(f"Error: {str(e)}", err=True)
-        sys.exit(1)
+        click.echo(f"GPU vendor: {vendor_info}")
+        if gpu_counts:
+            click.echo("GPU information:")
+            for gpu_type, count in sorted(gpu_counts.items()):
+                click.echo(f"  {gpu_type}: {count}")
+        else:
+            click.echo("No GPUs found")
 
 
 @cli.command(name="check-gpu")
@@ -104,16 +100,12 @@ def check_gpu(gpu_type):
 
     GPU_TYPE: GPU type to check for (e.g., A100, MI300X)
     """
-    try:
-        unified_info = UnifiedInfo()
-        has_gpu = unified_info.has_gpu_type(gpu_type)
-        if has_gpu:
-            click.echo(f"GPU type {gpu_type} is available in the cluster.")
-        else:
-            click.echo(f"GPU type {gpu_type} is NOT available in the cluster.")
-    except RuntimeError as e:
-        click.echo(f"Error: {str(e)}", err=True)
-        sys.exit(1)
+    unified_info = UnifiedInfo()
+    has_gpu = unified_info.has_gpu_type(gpu_type)
+    if has_gpu:
+        click.echo(f"GPU type {gpu_type} is available in the cluster.")
+    else:
+        click.echo(f"GPU type {gpu_type} is NOT available in the cluster.")
 
 
 @cli.command()
