@@ -19,7 +19,9 @@ authors = [
   {name = "Lucca Bertoncini", email = "luccab@meta.com"},
   {name = "Kalyan Saladi", email = "skalyan@meta.com"}
 ]
-dependencies = []
+dependencies = [
+    "click>=8.0.0",
+]
 
 [project.scripts]
 cscope = "clusterscope.cli:main"
@@ -33,6 +35,7 @@ dev = [
   "mypy",
   "pre-commit",
   "build",
+  "types-click",
 ]
 
 [tool.setuptools]

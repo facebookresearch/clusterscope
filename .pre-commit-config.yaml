@@ -27,3 +27,5 @@ repos:
     - id: mypy
       files: ^(clusterscope)/
       args: ["--install-types", "--non-interactive"]
+      additional_dependencies:
+        - types-click
