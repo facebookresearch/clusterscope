@@ -27,41 +27,29 @@ def cli():
 @cli.command()
 def info():
     """Show basic cluster information."""
-    try:
-        unified_info = UnifiedInfo()
-        cluster_name = unified_info.get_cluster_name()
-        slurm_version = unified_info.get_slurm_version()
-        click.echo(f"Cluster Name: {cluster_name}")
-        click.echo(f"Slurm Version: {slurm_version}")
-    except RuntimeError as e:
-        click.echo(f"Error: {str(e)}", err=True)
-        sys.exit(1)
+    unified_info = UnifiedInfo()
+    cluster_name = unified_info.get_cluster_name()
+    slurm_version = unified_info.get_slurm_version()
+    click.echo(f"Cluster Name: {cluster_name}")
+    click.echo(f"Slurm Version: {slurm_version}")
 
 
 @cli.command()
 def cpus():
     """Show CPU counts per node."""
-    try:
-        unified_info = UnifiedInfo()
-        cpus_per_node = unified_info.get_cpus_per_node()
-        click.echo("CPU counts per node:")
-        click.echo(cpus_per_node)
-    except RuntimeError as e:
-        click.echo(f"Error: {str(e)}", err=True)
-        sys.exit(1)
+    unified_info = UnifiedInfo()
+    cpus_per_node = unified_info.get_cpus_per_node()
+    click.echo("CPU counts per node:")
+    click.echo(cpus_per_node)
 
 
 @cli.command()
 def mem():
     """Show memory information per node."""
-    try:
-        unified_info = UnifiedInfo()
-        mem_per_node = unified_info.get_mem_per_node_MB()
-        click.echo("Mem per node MB:")
-        click.echo(mem_per_node)
-    except RuntimeError as e:
-        click.echo(f"Error: {str(e)}", err=True)
-        sys.exit(1)
+    unified_info = UnifiedInfo()
+    mem_per_node = unified_info.get_mem_per_node_MB()
+    click.echo("Mem per node MB:")
+    click.echo(mem_per_node)
 
 
 @cli.command()
@@ -131,19 +119,15 @@ def check_gpu(gpu_type):
 @cli.command()
 def aws():
     """Check if running on AWS and show NCCL settings."""
-    try:
-        aws_cluster_info = AWSClusterInfo()
-        is_aws = aws_cluster_info.is_aws_cluster()
-        if is_aws:
-            click.echo("This is an AWS cluster.")
-            nccl_settings = aws_cluster_info.get_aws_nccl_settings()
-            click.echo("\nRecommended NCCL settings:")
-            click.echo(format_dict(nccl_settings))
-        else:
-            click.echo("This is NOT an AWS cluster.")
-    except RuntimeError as e:
-        click.echo(f"Error: {str(e)}", err=True)
-        sys.exit(1)
+    aws_cluster_info = AWSClusterInfo()
+    is_aws = aws_cluster_info.is_aws_cluster()
+    if is_aws:
+        click.echo("This is an AWS cluster.")
+        nccl_settings = aws_cluster_info.get_aws_nccl_settings()
+        click.echo("\nRecommended NCCL settings:")
+        click.echo(format_dict(nccl_settings))
+    else:
+        click.echo("This is NOT an AWS cluster.")
 
 
 @cli.group(name="job-gen")
@@ -169,24 +153,20 @@ def job_gen():
 )
 def task(num_gpus: int, num_tasks_per_node: int, output_format: str):
     """Generate job requirements for a task job."""
-    try:
-        unified_info = UnifiedInfo()
-        job_requirements = unified_info.get_task_resource_requirements(
-            num_gpus=num_gpus,
-            num_tasks_per_node=num_tasks_per_node,
-        )
+    unified_info = UnifiedInfo()
+    job_requirements = unified_info.get_task_resource_requirements(
+        num_gpus=num_gpus,
+        num_tasks_per_node=num_tasks_per_node,
+    )
 
-        # Route to the correct format method based on CLI option
-        format_methods = {
-            "json": job_requirements.to_json,
-            "sbatch": job_requirements.to_sbatch,
-            "srun": job_requirements.to_srun,
-            "submitit": job_requirements.to_submitit,
-        }
-        click.echo(format_methods[output_format]())
-    except (RuntimeError, ValueError) as e:
-        click.echo(f"Error: {str(e)}", err=True)
-        sys.exit(1)
+    # Route to the correct format method based on CLI option
+    format_methods = {
+        "json": job_requirements.to_json,
+        "sbatch": job_requirements.to_sbatch,
+        "srun": job_requirements.to_srun,
+        "submitit": job_requirements.to_submitit,
+    }
+    click.echo(format_methods[output_format]())
 
 
 @job_gen.command()
@@ -202,23 +182,19 @@ def task(num_gpus: int, num_tasks_per_node: int, output_format: str):
 )
 def array(num_gpus_per_task: int, output_format: str):
     """Generate job requirements for an array job."""
-    try:
-        unified_info = UnifiedInfo()
-        job_requirements = unified_info.get_array_job_requirements(
-            num_gpus_per_task=num_gpus_per_task,
-        )
+    unified_info = UnifiedInfo()
+    job_requirements = unified_info.get_array_job_requirements(
+        num_gpus_per_task=num_gpus_per_task,
+    )
 
-        # Route to the correct format method based on CLI option
-        format_methods = {
-            "json": job_requirements.to_json,
-            "sbatch": job_requirements.to_sbatch,
-            "srun": job_requirements.to_srun,
-            "submitit": job_requirements.to_submitit,
-        }
-        click.echo(format_methods[output_format]())
-    except (RuntimeError, ValueError) as e:
-        click.echo(f"Error: {str(e)}", err=True)
-        sys.exit(1)
+    # Route to the correct format method based on CLI option
+    format_methods = {
+        "json": job_requirements.to_json,
+        "sbatch": job_requirements.to_sbatch,
+        "srun": job_requirements.to_srun,
+        "submitit": job_requirements.to_submitit,
+    }
+    click.echo(format_methods[output_format]())
 
 
 def main():
