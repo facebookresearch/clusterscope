@@ -12,6 +12,7 @@ cfgv==3.4.0
     # via pre-commit
 click==8.3.0
     # via
+    #   clusterscope (pyproject.toml)
     #   black
     #   moreorless
     #   ufmt
@@ -73,16 +74,25 @@ stdlibs==2025.5.10
     # via usort
 toml==0.10.2
     # via usort
+tomli==2.2.1
+    # via
+    #   black
+    #   build
+    #   mypy
 tomlkit==0.13.2
     # via ufmt
 trailrunner==1.4.0
     # via
     #   ufmt
     #   usort
+types-click==7.1.8
+    # via clusterscope (pyproject.toml)
 typing-extensions==4.15.0
     # via
+    #   black
     #   mypy
     #   ufmt
+    #   virtualenv
 ufmt==2.8.0
     # via clusterscope (pyproject.toml)
 usort==1.0.8.post1
