@@ -172,8 +172,17 @@ def job_gen():
     pass
 
 
-@job_gen.command()
+@job_gen.group(name="task")
+def task():
+    """Generate job requirements for a task job."""
+    pass
+
+
+@task.command()
 @click.option("--num-gpus", type=int, required=True, help="Number of GPUs to request")
+@click.option(
+    "--partition", type=str, default=None, required=True, help="Partition to query"
+)
 @click.option(
     "--num-tasks-per-node",
     type=int,
@@ -187,14 +196,8 @@ def job_gen():
     default="json",
     help="Format to output the job requirements in",
 )
-@click.option(
-    "--partition",
-    type=str,
-    default=None,
-    help="Slurm partition name to filter queries (optional)",
-)
-def task(num_gpus: int, num_tasks_per_node: int, output_format: str, partition: str):
-    """Generate job requirements for a task job."""
+def slurm(num_gpus: int, num_tasks_per_node: int, output_format: str, partition: str):
+    """Generate job requirements for a task job using Slurm."""
     unified_info = UnifiedInfo(partition=partition)
     job_requirements = unified_info.get_task_resource_requirements(
         num_gpus=num_gpus,
