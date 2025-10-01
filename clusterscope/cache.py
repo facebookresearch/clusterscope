@@ -35,7 +35,11 @@ def save(
 
     loaded = load(filepath)
 
-    fd = os.open(filepath, os.O_WRONLY | os.O_APPEND)
+    try:
+        fd = os.open(filepath, os.O_WRONLY | os.O_APPEND)
+    except PermissionError:
+        # Can't open the file due to permission error, ignore caching instead of failing
+        return
     f = os.fdopen(fd, "a")
 
     try:
