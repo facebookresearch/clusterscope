@@ -6,6 +6,7 @@
 import ast
 import fcntl
 import functools
+import logging
 import os
 from pathlib import Path
 from typing import Any, Callable, Dict, Hashable, Union
@@ -39,6 +40,9 @@ def save(
         fd = os.open(filepath, os.O_WRONLY | os.O_APPEND)
     except PermissionError:
         # Can't open the file due to permission error, ignore caching instead of failing
+        logging.debug(
+            f"PermissionError when trying to open {filepath=}, won't cache results"
+        )
         return
     f = os.fdopen(fd, "a")
 
