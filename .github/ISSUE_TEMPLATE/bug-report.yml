@@ -45,8 +45,6 @@ body:
         nvidia-smi
         ```
 
-  validations:
-    required: true
 - type: markdown
   attributes:
     value: >
