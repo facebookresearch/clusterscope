@@ -5,7 +5,6 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 import json
-import sys
 from typing import Any, Dict
 
 import click
@@ -234,6 +233,7 @@ def array(num_gpus_per_task: int, output_format: str, partition: str):
 def main():
     """Main entry point for the Slurm information CLI."""
     cli()
+
 
 if __name__ == "__main__":
     main()

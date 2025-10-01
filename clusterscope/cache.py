@@ -3,10 +3,10 @@
 
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
-import os
-import fcntl
 import ast
+import fcntl
 import functools
+import os
 from pathlib import Path
 from typing import Any, Callable, Dict, Hashable, Union
 
@@ -29,7 +29,7 @@ def save(
     loaded = load(filepath)
 
     fd = os.open(filepath, os.O_WRONLY | os.O_APPEND)
-    f = os.fdopen(fd, 'a')
+    f = os.fdopen(fd, "a")
 
     try:
         fcntl.flock(f.fileno(), fcntl.LOCK_EX)
@@ -48,9 +48,9 @@ def load(filepath: str = CACHE_PATH) -> Dict[Hashable, Union[str, float, bool, i
 
     if not path.exists():
         return loaded
-    
+
     fd = os.open(filepath, os.O_RDONLY)
-    f = os.fdopen(fd, 'r')
+    f = os.fdopen(fd, "r")
 
     try:
         fcntl.flock(f.fileno(), fcntl.LOCK_SH)
