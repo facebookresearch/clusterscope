@@ -280,13 +280,9 @@ class UnifiedInfo:
 
         # Memory per node: Convert MB to GB and format for Slurm
         # Note: Memory is allocated per node, not per task in most Slurm configurations
-        required_ram_gb = total_required_ram_mb / 1024
-        if required_ram_gb >= 1024:
-            # Use TB format for very large memory
-            sbatch_memory = f"{required_ram_gb / 1024:.0f}T"
-        else:
-            # Use GB format (most common)
-            sbatch_memory = f"{required_ram_gb:.0f}G"
+        required_ram_gb = total_required_ram_mb // 1000
+        # Default to GB for higher precision
+        sbatch_memory = f"{required_ram_gb:.0f}G"
 
         return ResourceShape(
             cpu_cores=sbatch_cpu_cores,
