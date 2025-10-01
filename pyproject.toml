@@ -21,6 +21,7 @@ authors = [
 ]
 dependencies = [
     "click>=8.0.0",
+    "ray",
 ]
 
 [project.scripts]
@@ -28,6 +29,7 @@ cscope = "clusterscope.cli:main"
 
 [project.optional-dependencies]
 dev = [
+  "ray",
   "flake8",
   "black",
   "ufmt",

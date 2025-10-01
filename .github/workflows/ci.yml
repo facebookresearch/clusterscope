@@ -8,6 +8,8 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
+    env:
+      UV_SYSTEM_PYTHON: 1
 
     steps:
       - uses: actions/checkout@v4
@@ -123,6 +125,8 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
+    env:
+      UV_SYSTEM_PYTHON: 1
 
     steps:
       - uses: actions/checkout@v4
@@ -144,7 +148,8 @@ jobs:
           make install
 
       - name: Run tests
-        run: python -m unittest discover -s tests
+        run: |
+          python -m unittest discover -s tests
 
   cli-tests:
     env:
