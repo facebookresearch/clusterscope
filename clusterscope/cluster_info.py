@@ -530,7 +530,6 @@ class LocalNodeInfo:
         else:
             return "none"
 
-    @fs_cache(var_name="LOCAL_NODE_CPU_COUNT")
     def get_cpu_count(self, timeout: int = 60) -> int:
         """Get the number of CPUs on the local node.
 
@@ -547,7 +546,6 @@ class LocalNodeInfo:
             return DarwinInfo().get_cpu_count(timeout)
         raise RuntimeError(f"Unsupported system: {system}")
 
-    @fs_cache(var_name="LOCAL_NODE_MEM_MB")
     def get_mem_MB(self, timeout: int = 60) -> int:
         """Get the amount of memory on the local node.
 
@@ -809,7 +807,6 @@ class SlurmClusterInfo:
         except (subprocess.SubprocessError, FileNotFoundError) as e:
             raise RuntimeError(f"Failed to get cluster name: {str(e)}")
 
-    @fs_cache(var_name="SLURM_MEM_PER_NODE_MB")
     def get_mem_per_node_MB(self) -> int:
         """Get the lowest memory available per node in the cluster.
 
@@ -841,7 +838,6 @@ class SlurmClusterInfo:
             logging.error(f"Failed to get Slurm memory information: {str(e)}")
             raise RuntimeError(f"Failed to get Slurm memory information: {str(e)}")
 
-    @fs_cache(var_name="SLURM_CPUS_PER_NODE")
     def get_cpus_per_node(self) -> int:
         """Get the minimum number of CPUs for each node in the cluster.
 
