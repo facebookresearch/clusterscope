@@ -26,6 +26,13 @@ def save(
         finally:
             os.umask(old_umask)
 
+    # Ensure file has permissions for all users to read/write
+    try:
+        os.chmod(filepath, 0o666)
+    except PermissionError:
+        # Try to write anyway and let it fail with a better error
+        pass
+
     loaded = load(filepath)
 
     fd = os.open(filepath, os.O_WRONLY | os.O_APPEND)
