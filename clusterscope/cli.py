@@ -24,6 +24,21 @@ def cli():
 
 
 @cli.command()
+def version():
+    """Show the version of clusterscope."""
+    try:
+        from importlib.metadata import version as get_version
+
+        pkg_version = get_version("clusterscope")
+    except Exception:
+        # Fallback to the version in __init__.py if setuptools-scm isn't available
+        import clusterscope
+
+        pkg_version = clusterscope.__version__
+    click.echo(f"clusterscope version {pkg_version}")
+
+
+@cli.command()
 @click.option(
     "--partition",
     type=str,
