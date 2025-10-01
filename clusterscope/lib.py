@@ -3,10 +3,15 @@
 
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
-from typing import Dict, Literal, Optional, Tuple
+from typing import Dict, Literal, Optional, Tuple, Union
 
 from clusterscope.cluster_info import LocalNodeInfo, UnifiedInfo
 from clusterscope.job_info import JobInfo
+
+# Configurable CPU memory usage percentage
+# This determines what percentage of total CPU memory is made available to applications
+# Can be modified by calling set_cpu_memory_usage_percentage()
+CPU_MEMORY_USAGE_PERCENTAGE = 95.0
 
 # Partition-aware unified info instance
 _unified_info: Optional[UnifiedInfo] = None
@@ -85,6 +90,126 @@ def mem(
             f"{to_unit} is not a supported unit. Currently supported units: MB, GB"
         )
     return mem
+
+
+def set_cpu_memory_usage_percentage(percentage: float) -> None:
+    """Set the global CPU memory usage percentage for applications.
+
+    This configures what percentage of total CPU memory is made available to applications
+    when calling available_cpu_memory_MB(), available_cpu_memory_GB(), etc.
+
+    Args:
+        percentage (float): Percentage of total CPU memory to make available (1.0-100.0)
+
+    Raises:
+        ValueError: If percentage is not between 1 and 100
+
+    Example:
+        # Configure to use 90% of CPU memory for applications
+        cs.set_cpu_memory_usage_percentage(90.0)
+
+        # Now all calls use 90% by default
+        available_mem = cs.available_cpu_memory_GB()  # Uses 90%
+    """
+    global CPU_MEMORY_USAGE_PERCENTAGE
+
+    if not (1.0 <= percentage <= 100.0):
+        raise ValueError("Percentage must be between 1.0 and 100.0")
+
+    CPU_MEMORY_USAGE_PERCENTAGE = percentage
+
+
+def get_cpu_memory_usage_percentage() -> float:
+    """Get the current CPU memory usage percentage setting.
+
+    Returns:
+        float: Current percentage of total CPU memory made available to applications
+    """
+    return CPU_MEMORY_USAGE_PERCENTAGE
+
+
+def available_cpu_memory_MB(partition: Optional[str] = None) -> int:
+    """Get the available CPU memory (RAM) for applications in MB.
+
+    Uses the configured CPU memory usage percentage (see set_cpu_memory_usage_percentage).
+    By default, returns 95% of total CPU memory.
+
+    This is useful for applications that need to know how much CPU memory (RAM) they can safely use
+    without exhausting system resources.
+
+    Note: This refers to system RAM, not GPU memory. For GPU memory information,
+    use get_gpu_generation_and_count() or related GPU methods.
+
+    Args:
+        partition (str, optional): Slurm partition name to filter queries.
+
+    Returns:
+        int: Available CPU memory in MB for applications
+
+    Example:
+        # Use default 95% of CPU memory
+        available_mb = cs.available_cpu_memory_MB()
+
+        # Configure for 90% usage
+        cs.set_cpu_memory_usage_percentage(90.0)
+        available_mb = cs.available_cpu_memory_MB()  # Now uses 90%
+    """
+    return get_unified_info(partition).get_available_cpu_memory_MB(
+        CPU_MEMORY_USAGE_PERCENTAGE
+    )
+
+
+def available_cpu_memory_GB(partition: Optional[str] = None) -> float:
+    """Get the available CPU memory (RAM) for applications in GB.
+
+    Uses the configured CPU memory usage percentage (see set_cpu_memory_usage_percentage).
+    By default, returns 95% of total CPU memory.
+
+    Note: This refers to system RAM, not GPU memory. For GPU memory information,
+    use get_gpu_generation_and_count() or related GPU methods.
+
+    Args:
+        partition (str, optional): Slurm partition name to filter queries.
+
+    Returns:
+        float: Available CPU memory in GB for applications
+
+    Example:
+        # Configure for 85% usage, then get available memory
+        cs.set_cpu_memory_usage_percentage(85.0)
+        available_gb = cs.available_cpu_memory_GB()
+    """
+    return get_unified_info(partition).get_available_cpu_memory_GB(
+        CPU_MEMORY_USAGE_PERCENTAGE
+    )
+
+
+def cpu_memory_info(partition: Optional[str] = None) -> Dict[str, Union[int, float]]:
+    """Get comprehensive CPU memory (RAM) information including total and available memory.
+
+    Uses the configured CPU memory usage percentage (see set_cpu_memory_usage_percentage).
+
+    Note: This refers to system RAM, not GPU memory. For GPU memory information,
+    use get_gpu_generation_and_count() or related GPU methods.
+
+    Args:
+        partition (str, optional): Slurm partition name to filter queries.
+
+    Returns:
+        Dict[str, Union[int, float]]: Dictionary containing:
+            - total_cpu_mb: Total CPU memory in MB
+            - total_cpu_gb: Total CPU memory in GB
+            - available_cpu_mb: Available CPU memory in MB (at configured percentage)
+            - available_cpu_gb: Available CPU memory in GB (at configured percentage)
+            - percentage: The percentage used for calculation
+
+    Example:
+        # Set custom percentage and get info
+        cs.set_cpu_memory_usage_percentage(80.0)
+        info = cs.cpu_memory_info()
+        print(f"Available: {info['available_cpu_gb']} GB at {info['percentage']}%")
+    """
+    return get_unified_info(partition).get_cpu_memory_info(CPU_MEMORY_USAGE_PERCENTAGE)
 
 
 def local_node_gpu_generation_and_count() -> Dict[str, int]:

@@ -17,6 +17,23 @@ from typing import Dict, List, NamedTuple, Optional, Set, Union
 from clusterscope.cache import fs_cache
 
 
+# Import the configurable constant for backward compatibility and consistency
+# This allows accessing the configured percentage while maintaining method signatures
+def _get_default_cpu_memory_percentage() -> float:
+    """Get the current configured CPU memory usage percentage.
+
+    This is imported here to avoid circular imports while allowing
+    cluster_info.py methods to use the configured value.
+    """
+    try:
+        from clusterscope.lib import CPU_MEMORY_USAGE_PERCENTAGE
+
+        return CPU_MEMORY_USAGE_PERCENTAGE
+    except ImportError:
+        # Fallback to default if lib not available (shouldn't happen in normal usage)
+        return 95.0
+
+
 class ResourceShape(NamedTuple):
     """Represents resource requirements for a job in Slurm SBATCH format."""
 
@@ -228,6 +245,88 @@ class UnifiedInfo:
         if self.is_slurm_cluster:
             return self.slurm_cluster_info.get_mem_per_node_MB()
         return self.local_node_info.get_mem_MB()
+
+    def get_available_cpu_memory_MB(self, percentage: Optional[float] = None) -> int:
+        """Get the available CPU memory (RAM) for applications as a percentage of total system memory.
+
+        This is useful for applications that need to know how much CPU memory (RAM) they can safely use
+        without exhausting system resources. By default, uses the configured library percentage.
+
+        Note: This refers to system RAM, not GPU memory. For GPU memory information,
+        use get_gpu_generation_and_count() or related GPU methods.
+
+        Args:
+            percentage (float, optional): Percentage of total CPU memory to make available.
+                                        If None, uses the configured library percentage.
+
+        Returns:
+            int: Available CPU memory in MB for applications
+
+        Raises:
+            ValueError: If percentage is not between 0 and 100
+        """
+        if percentage is None:
+            percentage = _get_default_cpu_memory_percentage()
+
+        if not (0 < percentage <= 100):
+            raise ValueError("Percentage must be between 0 and 100")
+
+        total_cpu_memory_mb = self.get_mem_per_node_MB()
+        available_cpu_memory_mb = int(total_cpu_memory_mb * (percentage / 100.0))
+        return available_cpu_memory_mb
+
+    def get_available_cpu_memory_GB(self, percentage: Optional[float] = None) -> float:
+        """Get the available CPU memory (RAM) for applications as a percentage of total system memory in GB.
+
+        Note: This refers to system RAM, not GPU memory. For GPU memory information,
+        use get_gpu_generation_and_count() or related GPU methods.
+
+        Args:
+            percentage (float, optional): Percentage of total CPU memory to make available.
+                                        If None, uses the configured library percentage.
+
+        Returns:
+            float: Available CPU memory in GB for applications
+
+        Raises:
+            ValueError: If percentage is not between 0 and 100
+        """
+        available_mb = self.get_available_cpu_memory_MB(percentage)
+        return available_mb / 1024.0
+
+    def get_cpu_memory_info(
+        self, percentage: Optional[float] = None
+    ) -> Dict[str, Union[int, float]]:
+        """Get comprehensive CPU memory (RAM) information including total and available memory.
+
+        Note: This refers to system RAM, not GPU memory. For GPU memory information,
+        use get_gpu_generation_and_count() or related GPU methods.
+
+        Args:
+            percentage (float, optional): Percentage of total CPU memory to make available.
+                                        If None, uses the configured library percentage.
+
+        Returns:
+            Dict[str, Union[int, float]]: Dictionary containing:
+                - total_cpu_mb: Total CPU memory in MB
+                - total_cpu_gb: Total CPU memory in GB
+                - available_cpu_mb: Available CPU memory in MB (at specified percentage)
+                - available_cpu_gb: Available CPU memory in GB (at specified percentage)
+                - percentage: The percentage used for calculation
+        """
+        if percentage is None:
+            percentage = _get_default_cpu_memory_percentage()
+
+        total_cpu_mb = self.get_mem_per_node_MB()
+        available_cpu_mb = self.get_available_cpu_memory_MB(percentage)
+
+        return {
+            "total_cpu_mb": total_cpu_mb,
+            "total_cpu_gb": round(total_cpu_mb / 1024.0, 2),
+            "available_cpu_mb": available_cpu_mb,
+            "available_cpu_gb": round(available_cpu_mb / 1024.0, 2),
+            "percentage": percentage,
+        }
 
     def get_gpu_generation_and_count(self) -> Dict[str, int]:
         """Get the number of GPUs on the slurm cluster node.
@@ -811,15 +910,19 @@ class SlurmClusterInfo:
 
     @fs_cache(var_name="SLURM_MEM_PER_NODE_MB")
     def get_mem_per_node_MB(self) -> int:
-        """Get the lowest memory available per node in the cluster.
+        """Get the lowest CPU memory (system RAM) available per node in the cluster.
+
+        This method uses 'sinfo -o %m' which queries the system RAM configured for each node,
+        NOT GPU memory. GPU memory is queried separately using 'sinfo -o %G'.
 
         Returns:
-            int: The memory per node in the cluster.
+            int: The CPU memory (system RAM) per node in MB.
 
         Raises:
             RuntimeError: If unable to retrieve node information.
         """
         try:
+            # Use %m format specifier which returns system memory (RAM), not GPU memory
             cmd = ["sinfo", "-o", "%100m", "--noconvert", "--noheader"]
             if self.partition:
                 cmd.extend(["-p", self.partition])
@@ -832,14 +935,14 @@ class SlurmClusterInfo:
                 check=True,
             )
 
-            logging.debug("Parsing node information...")
+            logging.debug("Parsing CPU memory (RAM) information from sinfo...")
             for line in result.stdout.splitlines():
                 mem = int(line.strip("+ "))
                 return mem
-            raise RuntimeError(f"No mem information found in: {result.stdout}")
+            raise RuntimeError(f"No CPU memory information found in: {result.stdout}")
         except (subprocess.SubprocessError, FileNotFoundError) as e:
-            logging.error(f"Failed to get Slurm memory information: {str(e)}")
-            raise RuntimeError(f"Failed to get Slurm memory information: {str(e)}")
+            logging.error(f"Failed to get Slurm CPU memory information: {str(e)}")
+            raise RuntimeError(f"Failed to get Slurm CPU memory information: {str(e)}")
 
     @fs_cache(var_name="SLURM_CPUS_PER_NODE")
     def get_cpus_per_node(self) -> int:

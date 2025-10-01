@@ -10,6 +10,10 @@ from typing import Any, Dict
 import click
 
 from clusterscope.cluster_info import AWSClusterInfo, UnifiedInfo
+from clusterscope.lib import get_cpu_memory_usage_percentage
+
+# Default CPU memory usage percentage for CLI operations
+DEFAULT_CPU_MEMORY_USAGE_PERCENTAGE = 95.0
 
 
 def format_dict(data: Dict[str, Any]) -> str:
@@ -76,12 +80,81 @@ def cpus(partition: str):
     default=None,
     help="Slurm partition name to filter queries (optional)",
 )
-def mem(partition: str):
-    """Show memory information per node."""
+@click.option(
+    "--unit",
+    type=click.Choice(["MB", "GB"]),
+    default="GB",
+    help="Unit to display CPU memory in (default: GB)",
+)
+@click.option(
+    "--detailed",
+    is_flag=True,
+    help="Show detailed CPU memory information including total and available",
+)
+@click.option(
+    "--available-only",
+    is_flag=True,
+    help="Show only available CPU memory for applications",
+)
+def mem(partition: str, unit: str, detailed: bool, available_only: bool):
+    """Show CPU memory (RAM) information per node.
+
+    Note: This shows system RAM, not GPU memory. Use 'gpus' command for GPU information.
+    The percentage of memory made available to applications is configured in the library
+    (default: 95%). Use clusterscope.set_cpu_memory_usage_percentage() to change it.
+    """
     unified_info = UnifiedInfo(partition=partition)
-    mem_per_node = unified_info.get_mem_per_node_MB()
-    click.echo("Mem per node MB:")
-    click.echo(mem_per_node)
+
+    if detailed:
+        # Show comprehensive CPU memory information using current configured percentage
+        current_percentage = get_cpu_memory_usage_percentage()
+        info = unified_info.get_cpu_memory_info(current_percentage)
+        click.echo("CPU Memory (RAM) Information:")
+        click.echo(
+            f"  Total CPU Memory: {info['total_cpu_mb']} MB ({info['total_cpu_gb']} GB)"
+        )
+        click.echo(
+            f"  Available for Apps ({info['percentage']}%): {info['available_cpu_mb']} MB ({info['available_cpu_gb']} GB)"
+        )
+        click.echo(
+            f"  Reserved for System: {info['total_cpu_mb'] - info['available_cpu_mb']} MB ({info['total_cpu_gb'] - info['available_cpu_gb']:.2f} GB)"
+        )
+        click.echo(
+            f"  Note: Use clusterscope.set_cpu_memory_usage_percentage() to change the {info['percentage']}% setting"
+        )
+    elif available_only:
+        # Show available CPU memory using current configured percentage
+        current_percentage = get_cpu_memory_usage_percentage()
+        if unit == "MB":
+            available_mem_mb = unified_info.get_available_cpu_memory_MB(
+                current_percentage
+            )
+            click.echo(f"Available CPU memory for applications: {available_mem_mb} MB")
+        else:  # GB
+            available_mem_gb = unified_info.get_available_cpu_memory_GB(
+                current_percentage
+            )
+            click.echo(
+                f"Available CPU memory for applications: {available_mem_gb:.2f} GB"
+            )
+        click.echo(
+            f"Note: Currently using {current_percentage}% of total memory. Use clusterscope.set_cpu_memory_usage_percentage() to change."
+        )
+    else:
+        # Show total CPU memory (default behavior)
+        total_mem = unified_info.get_mem_per_node_MB()
+        if unit == "MB":
+            click.echo(f"Total CPU memory per node: {total_mem} MB")
+        else:  # GB
+            click.echo(f"Total CPU memory per node: {total_mem / 1024:.2f} GB")
+        # Show available memory using current configured percentage
+        current_percentage = get_cpu_memory_usage_percentage()
+        divisor = 1024.0 if unit == "GB" else 1.0
+        available_mem = (total_mem * (current_percentage / 100.0)) / divisor
+
+        click.echo(
+            f"Available for applications ({current_percentage}%): {available_mem:.2f} {unit}"
+        )
 
 
 @cli.command()

@@ -42,6 +42,89 @@ class TestUnifiedInfo(unittest.TestCase):
         unified_info = UnifiedInfo(partition="test_partition")
         self.assertEqual(unified_info.slurm_cluster_info.partition, "test_partition")
 
+    def test_get_available_cpu_memory_MB_default(self):
+        """Test get_available_cpu_memory_MB with default percentage."""
+        unified_info = UnifiedInfo()
+        with patch.object(unified_info, "get_mem_per_node_MB", return_value=100000):
+            result = unified_info.get_available_cpu_memory_MB()
+            expected = int(100000 * 0.95)  # 95% default
+            self.assertEqual(result, expected)
+
+    def test_get_available_cpu_memory_MB_custom_percentage(self):
+        """Test get_available_cpu_memory_MB with custom percentage."""
+        unified_info = UnifiedInfo()
+        with patch.object(unified_info, "get_mem_per_node_MB", return_value=100000):
+            result = unified_info.get_available_cpu_memory_MB(80.0)
+            expected = int(100000 * 0.80)  # 80%
+            self.assertEqual(result, expected)
+
+    def test_get_available_cpu_memory_GB_default(self):
+        """Test get_available_cpu_memory_GB with default percentage."""
+        unified_info = UnifiedInfo()
+        with patch.object(unified_info, "get_mem_per_node_MB", return_value=100000):
+            result = unified_info.get_available_cpu_memory_GB()
+            expected = (100000 * 0.95) / 1024.0  # 95% default, converted to GB
+            self.assertAlmostEqual(result, expected, places=2)
+
+    def test_get_available_cpu_memory_GB_custom_percentage(self):
+        """Test get_available_cpu_memory_GB with custom percentage."""
+        unified_info = UnifiedInfo()
+        with patch.object(unified_info, "get_mem_per_node_MB", return_value=100000):
+            result = unified_info.get_available_cpu_memory_GB(85.0)
+            expected = (100000 * 0.85) / 1024.0  # 85%, converted to GB
+            self.assertAlmostEqual(result, expected, places=2)
+
+    def test_get_cpu_memory_info_default(self):
+        """Test get_cpu_memory_info with default percentage."""
+        unified_info = UnifiedInfo()
+        with patch.object(unified_info, "get_mem_per_node_MB", return_value=100000):
+            result = unified_info.get_cpu_memory_info()
+
+            expected = {
+                "total_cpu_mb": 100000,
+                "total_cpu_gb": round(100000 / 1024.0, 2),
+                "available_cpu_mb": int(100000 * 0.95),
+                "available_cpu_gb": round((100000 * 0.95) / 1024.0, 2),
+                "percentage": 95.0,
+            }
+            self.assertEqual(result, expected)
+
+    def test_get_cpu_memory_info_custom_percentage(self):
+        """Test get_cpu_memory_info with custom percentage."""
+        unified_info = UnifiedInfo()
+        with patch.object(unified_info, "get_mem_per_node_MB", return_value=200000):
+            result = unified_info.get_cpu_memory_info(90.0)
+
+            expected = {
+                "total_cpu_mb": 200000,
+                "total_cpu_gb": round(200000 / 1024.0, 2),
+                "available_cpu_mb": int(200000 * 0.90),
+                "available_cpu_gb": round((200000 * 0.90) / 1024.0, 2),
+                "percentage": 90.0,
+            }
+            self.assertEqual(result, expected)
+
+    def test_cpu_memory_percentage_validation(self):
+        """Test CPU memory percentage validation."""
+        unified_info = UnifiedInfo()
+        with patch.object(unified_info, "get_mem_per_node_MB", return_value=100000):
+            # Test invalid percentages
+            with self.assertRaises(ValueError):
+                unified_info.get_available_cpu_memory_MB(0.0)
+
+            with self.assertRaises(ValueError):
+                unified_info.get_available_cpu_memory_MB(-5.0)
+
+            with self.assertRaises(ValueError):
+                unified_info.get_available_cpu_memory_MB(150.0)
+
+            # Test valid edge cases
+            result_min = unified_info.get_available_cpu_memory_MB(1.0)
+            self.assertEqual(result_min, 1000)  # 1% of 100000
+
+            result_max = unified_info.get_available_cpu_memory_MB(100.0)
+            self.assertEqual(result_max, 100000)  # 100% of 100000
+
 
 class TestLinuxInfo(unittest.TestCase):
     def setUp(self):
