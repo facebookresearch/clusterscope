@@ -30,10 +30,11 @@ def get_node_resources(node_spec: str) -> dict:
     Query node resources for given node specification.
     Returns dict with max resources across nodes in the spec.
     """
+    # not checking the return code here because `scontrol show node` can return non-zero exit code even
+    # though stdout has what we need.
     result = subprocess.run(
         ["scontrol", "show", "node", node_spec, "-o"], capture_output=True, text=True
     )
-    # result = run_cli(['scontrol', 'show', 'node', node_spec, '-o'])
 
     max_cpus = 0
     max_mem = 0
