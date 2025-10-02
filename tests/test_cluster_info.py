@@ -754,9 +754,7 @@ class TestResourceRequirementMethods(unittest.TestCase):
         result = self.unified_info.get_task_resource_requirements(num_gpus=8)
 
         self.assertEqual(result.cpu_cores, 192)  # All CPUs
-        self.assertEqual(
-            result.memory, "2T"
-        )  # All memory: 1843200/1024/1024 = 1.8TB rounds to 2T
+        self.assertEqual(result.memory, "1800G")  # All memory: 1843200/1024 = 1800GB
         self.assertEqual(result.tasks_per_node, 1)
 
     @patch.object(UnifiedInfo, "get_total_gpus_per_node")
@@ -812,7 +810,7 @@ class TestResourceRequirementMethods(unittest.TestCase):
 
         result = self.unified_info.get_task_resource_requirements(num_gpus=8)
 
-        self.assertEqual(result.memory, "8T")  # 8388608/1024/1024 = 8TB
+        self.assertEqual(result.memory, "8192G")  # 8388608/1024 = 8192GB
 
     @patch.object(UnifiedInfo, "get_total_gpus_per_node")
     @patch.object(UnifiedInfo, "get_cpus_per_node")

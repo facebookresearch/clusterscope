@@ -7,6 +7,7 @@ import json
 import unittest
 
 from clusterscope.cluster_info import ResourceShape
+from clusterscope.parser import parse_memory_to_gb
 
 
 class TestResourceShape(unittest.TestCase):
@@ -45,7 +46,7 @@ class TestResourceShape(unittest.TestCase):
                 resource = ResourceShape(
                     cpu_cores=8, memory=memory_str, tasks_per_node=1
                 )
-                self.assertEqual(resource._parse_memory_to_gb(), expected_gb)
+                self.assertEqual(parse_memory_to_gb(resource.memory), expected_gb)
 
     def test_to_json(self):
         """Test to_json format method with various configurations."""

@@ -10,6 +10,7 @@ from typing import Any, Dict
 import click
 
 from clusterscope.cluster_info import AWSClusterInfo, UnifiedInfo
+from clusterscope.slurm.partition import get_partition_info
 
 
 def format_dict(data: Dict[str, Any]) -> str:
@@ -198,6 +199,14 @@ def task():
 )
 def slurm(num_gpus: int, num_tasks_per_node: int, output_format: str, partition: str):
     """Generate job requirements for a task of a Slurm job."""
+    partitions = get_partition_info()
+    partition_names = [p.name for p in partitions]
+
+    if partition not in partition_names:
+        raise ValueError(
+            f"Partition {partition} not found. Available partitions: {partition_names}"
+        )
+
     unified_info = UnifiedInfo(partition=partition)
     job_requirements = unified_info.get_task_resource_requirements(
         num_gpus=num_gpus,

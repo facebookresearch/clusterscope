@@ -12,9 +12,11 @@ import shutil
 import subprocess
 from collections import defaultdict
 from functools import lru_cache
-from typing import Dict, List, NamedTuple, Optional, Set, Union
+from typing import Dict, NamedTuple, Optional, Set
 
 from clusterscope.cache import fs_cache
+from clusterscope.parser import parse_memory_to_gb
+from clusterscope.shell import run_cli
 
 
 class ResourceShape(NamedTuple):
@@ -24,27 +26,13 @@ class ResourceShape(NamedTuple):
     memory: str
     tasks_per_node: int
 
-    def _parse_memory_to_gb(self) -> int:
-        """Parse memory string and convert to GB.
-
-        Returns:
-            int: Memory in GB
-        """
-        mem_value = self.memory.rstrip("GT")
-        if self.memory.endswith("T"):
-            return int(mem_value) * 1024
-        elif self.memory.endswith("G"):
-            return int(mem_value)
-        else:
-            raise RuntimeError(f"Invalid memory format: {self.memory}")
-
     def to_json(self) -> str:
         """Convert ResourceShape to JSON format.
 
         Returns:
             str: JSON representation of the resource requirements
         """
-        mem_gb = self._parse_memory_to_gb()
+        mem_gb = parse_memory_to_gb(self.memory)
 
         data = {
             "cpu_cores": self.cpu_cores,
@@ -88,7 +76,7 @@ class ResourceShape(NamedTuple):
         Returns:
             str: JSON representation of submitit parameters
         """
-        mem_gb = self._parse_memory_to_gb()
+        mem_gb = parse_memory_to_gb(self.memory)
 
         params = {
             "cpus_per_task": self.cpu_cores,
@@ -122,51 +110,6 @@ AMD_GPU_TYPES = {
     "RX7900XTX": "RX 7900",
     "RX6900XT": "RX 6900",
 }
-
-
-def run_cli(
-    cmd: List[str],
-    text: bool = True,
-    timeout: int = 60,
-    stderr: Union[int, None] = None,
-) -> str:
-    """
-    Run a CLI command after verifying it's available.
-
-    Args:
-        cmd: List of command and arguments
-        text: Whether to return text output (default: True)
-        timeout: Command timeout in seconds (default: 60)
-        stderr: How to handle stderr (default: None)
-
-    Returns:
-        str: Command output
-
-    Raises:
-        RuntimeError: If command is not available or execution fails
-    """
-    if not cmd:
-        raise RuntimeError("Command list cannot be empty")
-
-    command_name = cmd[0]
-
-    # Check if command is available
-    if shutil.which(command_name) is None:
-        raise RuntimeError(f"Command '{command_name}' is not available on this system")
-
-    try:
-        result = subprocess.check_output(cmd, text=text, timeout=timeout, stderr=stderr)
-        return result
-    except subprocess.CalledProcessError as e:
-        raise RuntimeError(
-            f"Command '{' '.join(cmd)}' failed with return code {e.returncode}: {e.output}"
-        )
-    except subprocess.TimeoutExpired as e:
-        raise RuntimeError(
-            f"Command '{' '.join(cmd)}' timed out after {timeout} seconds"
-        )
-    except (subprocess.SubprocessError, FileNotFoundError) as e:
-        raise RuntimeError(f"Failed to execute command '{' '.join(cmd)}': {str(e)}")
 
 
 class UnifiedInfo:
@@ -337,13 +280,9 @@ class UnifiedInfo:
 
         # Memory per node: Convert MB to GB and format for Slurm
         # Note: Memory is allocated per node, not per task in most Slurm configurations
-        required_ram_gb = total_required_ram_mb / 1024
-        if required_ram_gb >= 1024:
-            # Use TB format for very large memory
-            sbatch_memory = f"{required_ram_gb / 1024:.0f}T"
-        else:
-            # Use GB format (most common)
-            sbatch_memory = f"{required_ram_gb:.0f}G"
+        required_ram_gb = total_required_ram_mb // 1024
+        # Default to GB for higher precision
+        sbatch_memory = f"{required_ram_gb:.0f}G"
 
         return ResourceShape(
             cpu_cores=sbatch_cpu_cores,
