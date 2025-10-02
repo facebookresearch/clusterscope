@@ -90,6 +90,7 @@ class ResourceShape(NamedTuple):
         mem_gb = parse_memory_to_gb(self.memory)
 
         params = {
+            "slurm_partition": self.slurm_partition,
             "cpus_per_task": self.cpu_cores,
             "mem_gb": mem_gb,
         }
