@@ -197,7 +197,7 @@ def task():
     help="Format to output the job requirements in",
 )
 def slurm(num_gpus: int, num_tasks_per_node: int, output_format: str, partition: str):
-    """Generate job requirements for a task job using Slurm."""
+    """Generate job requirements for a task of a Slurm job."""
     unified_info = UnifiedInfo(partition=partition)
     job_requirements = unified_info.get_task_resource_requirements(
         num_gpus=num_gpus,
