@@ -10,7 +10,7 @@ from typing import Any, Dict
 import click
 
 from clusterscope.cluster_info import AWSClusterInfo, UnifiedInfo
-from clusterscope.slurm.partition import get_partition_info
+from clusterscope.slurm.partition import find_matching_partitions, get_partition_info
 
 
 def format_dict(data: Dict[str, Any]) -> str:
@@ -165,6 +165,36 @@ def aws():
         click.echo(format_dict(nccl_settings))
     else:
         click.echo("This is NOT an AWS cluster.")
+
+
+@cli.command()
+@click.option(
+    "--gpus-per-node", type=int, required=True, help="Number of GPUs to request"
+)
+@click.option("--cpus-per-node", type=int, default=0, help="Number of CPUs to request")
+@click.option("--cpu-ram", type=int, default=0, help="Amount of RAM to request in GB")
+def find_gpu_partitions(
+    gpus_per_node: int,
+    cpus_per_node: int,
+    cpu_ram: int,
+):
+    if gpus_per_node == 0:
+        raise ValueError("Number of GPUs must be greater than 0.")
+
+    partitions = get_partition_info()
+    matching_partitions = find_matching_partitions(
+        partitions=partitions,
+        cpus_per_node=cpus_per_node,
+        gpus_per_node=gpus_per_node,
+        cpu_ram=cpu_ram,
+    )
+
+    if not matching_partitions:
+        click.echo("No matching partitions found")
+        return
+    click.echo("Found partitions:")
+    for partition in matching_partitions:
+        click.echo(f"- {partition.name}")
 
 
 @cli.group(name="job-gen")
