@@ -207,6 +207,7 @@ def slurm(num_gpus: int, num_tasks_per_node: int, output_format: str, partition:
 
     unified_info = UnifiedInfo(partition=partition)
     job_requirements = unified_info.get_task_resource_requirements(
+        partition=partition,
         num_gpus=num_gpus,
         num_tasks_per_node=num_tasks_per_node,
     )
@@ -242,6 +243,7 @@ def array(num_gpus_per_task: int, output_format: str, partition: str):
     """Generate job requirements for an array job."""
     unified_info = UnifiedInfo(partition=partition)
     job_requirements = unified_info.get_array_job_requirements(
+        partition=partition,
         num_gpus_per_task=num_gpus_per_task,
     )
 

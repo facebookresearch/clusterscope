@@ -25,6 +25,8 @@ class ResourceShape(NamedTuple):
     cpu_cores: int
     memory: str
     tasks_per_node: int
+    gpus_per_node: int
+    slurm_partition: str
 
     def to_json(self) -> str:
         """Convert ResourceShape to JSON format.
@@ -39,6 +41,8 @@ class ResourceShape(NamedTuple):
             "memory": self.memory,
             "tasks_per_node": self.tasks_per_node,
             "mem_gb": mem_gb,
+            "gpus_per_node": self.gpus_per_node,
+            "slurm_partition": self.slurm_partition,
         }
         return json.dumps(data, indent=2)
 
@@ -53,6 +57,8 @@ class ResourceShape(NamedTuple):
             f"#SBATCH --cpus-per-task={self.cpu_cores}",
             f"#SBATCH --mem={self.memory}",
             f"#SBATCH --ntasks-per-node={self.tasks_per_node}",
+            f"#SBATCH --gres=gpu:{self.gpus_per_node}",
+            f"#SBATCH --partition={self.slurm_partition}",
         ]
         return "\n".join(lines)
 
@@ -67,6 +73,8 @@ class ResourceShape(NamedTuple):
             f"--cpus-per-task={self.cpu_cores}",
             f"--mem={self.memory}",
             f"--ntasks-per-node={self.tasks_per_node}",
+            f"--gres=gpu:{self.gpus_per_node}",
+            f"--partition={self.slurm_partition}",
         ]
         return " ".join(cmd_parts)
 
@@ -79,9 +87,11 @@ class ResourceShape(NamedTuple):
         mem_gb = parse_memory_to_gb(self.memory)
 
         params = {
+            "slurm_partition": self.slurm_partition,
             "cpus_per_task": self.cpu_cores,
             "mem_gb": mem_gb,
             "tasks_per_node": self.tasks_per_node,
+            "gpus_per_node": self.gpus_per_node,
         }
         return json.dumps(params, indent=2)
 
@@ -222,7 +232,7 @@ class UnifiedInfo:
         return max(total_gpus, 1)  # Ensure at least 1 to avoid division by zero
 
     def get_task_resource_requirements(
-        self, num_gpus: int, num_tasks_per_node: int = 1
+        self, partition: str, num_gpus: int, num_tasks_per_node: int = 1
     ) -> ResourceShape:
         """Calculate resource requirements for better GPU packing based on node's GPU configuration.
 
@@ -285,12 +295,16 @@ class UnifiedInfo:
         sbatch_memory = f"{required_ram_gb:.0f}G"
 
         return ResourceShape(
+            slurm_partition=partition,
             cpu_cores=sbatch_cpu_cores,
             memory=sbatch_memory,
             tasks_per_node=num_tasks_per_node,
+            gpus_per_node=num_gpus,
         )
 
-    def get_array_job_requirements(self, num_gpus_per_task: int) -> ResourceShape:
+    def get_array_job_requirements(
+        self, partition: str, num_gpus_per_task: int
+    ) -> ResourceShape:
         """Calculate resource requirements for array jobs with optimal GPU packing.
 
         For array jobs, each array element gets its own resource allocation.
@@ -349,7 +363,11 @@ class UnifiedInfo:
 
         # Array jobs always have 1 task per array element
         return ResourceShape(
-            cpu_cores=sbatch_cpu_cores, memory=sbatch_memory, tasks_per_node=1
+            slurm_partition=partition,
+            cpu_cores=sbatch_cpu_cores,
+            memory=sbatch_memory,
+            tasks_per_node=1,
+            gpus_per_node=num_gpus_per_task,
         )
 
 
