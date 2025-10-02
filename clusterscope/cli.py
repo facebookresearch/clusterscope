@@ -213,6 +213,7 @@ def task():
     default=None,
     help="Time limit for the job (format: HH:MM:SS or days-HH:MM:SS, optional)",
 )
+@click.option("--slurm-cmd", default=None, help="Command to run on Slurm")
 def slurm(
     num_gpus: int,
     num_tasks_per_node: int,
@@ -221,6 +222,7 @@ def slurm(
     account: str,
     qos: str,
     time: str,
+    slurm_cmd: str,
 ):
     """Generate job requirements for a task of a Slurm job."""
     partitions = get_partition_info()
@@ -239,6 +241,7 @@ def slurm(
         account=account,
         qos=qos,
         time=time,
+        slurm_cmd=slurm_cmd,
     )
 
     # Route to the correct format method based on CLI option

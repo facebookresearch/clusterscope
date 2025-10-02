@@ -27,6 +27,7 @@ class ResourceShape(NamedTuple):
     tasks_per_node: int
     gpus_per_node: int
     slurm_partition: str
+    slurm_cmd: Optional[str] = None
     account: Optional[str] = None
     qos: Optional[str] = None
     time: Optional[str] = None
@@ -59,6 +60,8 @@ class ResourceShape(NamedTuple):
             value = getattr(self, attr_name)
             if value is not None:
                 lines.append(f"#SBATCH --{attr_name}={value}")
+        if self.slurm_cmd is not None:
+            lines.append(self.slurm_cmd)
         return "\n".join(lines)
 
     def to_srun(self) -> str:
@@ -79,6 +82,8 @@ class ResourceShape(NamedTuple):
             value = getattr(self, attr_name)
             if value is not None:
                 cmd_parts.append(f"--{attr_name}={value}")
+        if self.slurm_cmd is not None:
+            cmd_parts.append(self.slurm_cmd)
         return " ".join(cmd_parts)
 
     def to_submitit(self) -> str:
