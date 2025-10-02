@@ -174,7 +174,7 @@ def job_gen():
 
 @job_gen.group(name="task")
 def task():
-    """Generate job requirements for a task job."""
+    """Generate job requirements for a task of a job."""
     pass
 
 
