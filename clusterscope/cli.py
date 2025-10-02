@@ -200,7 +200,7 @@ def task():
 def slurm(num_gpus: int, num_tasks_per_node: int, output_format: str, partition: str):
     """Generate job requirements for a task of a Slurm job."""
     partitions = get_partition_info()
-    partition_names = [p.name for p in partitions]
+    partition_names = [p.name for p in partitions if p.state == "UP"]
 
     if partition not in partition_names:
         raise ValueError(
