@@ -175,7 +175,7 @@ def job_gen():
 
 @job_gen.group(name="task")
 def task():
-    """Generate job requirements for a task job."""
+    """Generate job requirements for a task of a job."""
     pass
 
 
@@ -198,7 +198,7 @@ def task():
     help="Format to output the job requirements in",
 )
 def slurm(num_gpus: int, num_tasks_per_node: int, output_format: str, partition: str):
-    """Generate job requirements for a task job using Slurm."""
+    """Generate job requirements for a task of a Slurm job."""
     partitions = get_partition_info()
     partition_names = [p.name for p in partitions]
 

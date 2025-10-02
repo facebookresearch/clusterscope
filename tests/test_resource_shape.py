@@ -48,47 +48,6 @@ class TestResourceShape(unittest.TestCase):
                 )
                 self.assertEqual(parse_memory_to_gb(resource.memory), expected_gb)
 
-    def test_format_methods(self):
-        """Test all format methods with various configurations."""
-        test_configs = [
-            # (cpu_cores, memory, tasks_per_node, expected_mem_gb)
-            (24, "225G", 1, 225),
-            (64, "1T", 2, 1024),
-            (8, "32G", 1, 32),
-            (128, "4T", 1, 4096),
-        ]
-
-        for cpu_cores, memory, tasks_per_node, expected_mem_gb in test_configs:
-            with self.subTest(config=f"{cpu_cores}cpu_{memory}_{tasks_per_node}tasks"):
-                resource = ResourceShape(
-                    cpu_cores=cpu_cores, memory=memory, tasks_per_node=tasks_per_node
-                )
-
-                # Test JSON format
-                json_result = json.loads(resource.to_json())
-                self.assertEqual(json_result["cpu_cores"], cpu_cores)
-                self.assertEqual(json_result["memory"], memory)
-                self.assertEqual(json_result["tasks_per_node"], tasks_per_node)
-                self.assertEqual(json_result["mem_gb"], expected_mem_gb)
-
-                # Test SBATCH format
-                sbatch_result = resource.to_sbatch()
-                self.assertIn("#!/bin/bash", sbatch_result)
-                self.assertIn(f"--cpus-per-task={cpu_cores}", sbatch_result)
-                self.assertIn(f"--mem={memory}", sbatch_result)
-                self.assertIn(f"--ntasks-per-node={tasks_per_node}", sbatch_result)
-
-                # Test SRUN format
-                srun_result = resource.to_srun()
-                expected_srun = f"srun --cpus-per-task={cpu_cores} --mem={memory} --ntasks-per-node={tasks_per_node}"
-                self.assertEqual(srun_result, expected_srun)
-
-                # Test Submitit format
-                submitit_result = json.loads(resource.to_submitit())
-                self.assertEqual(submitit_result["cpus_per_task"], cpu_cores)
-                self.assertEqual(submitit_result["mem_gb"], expected_mem_gb)
-                self.assertEqual(submitit_result["tasks_per_node"], tasks_per_node)
-
     def test_to_json(self):
         """Test to_json format method with various configurations."""
         test_configs = [

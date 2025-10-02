@@ -6,20 +6,25 @@
 
 Running the below from the root of this repository brings [uv](https://docs.astral.sh/uv/), all required development dependencies, and installs clusterscope in editable mode:
 
-```bash
+```shell
 make install-dev-requirements
+```
+
+You can then activate the env:
+```shell
+source <(make activate)
 ```
 
 This should get you started with a binary and library available in your local environment:
 
-```bash
+```shell
 $ python
 >>> import clusterscope
 >>> clusterscope.cluster()
 '<your-cluster-name>'
 ```
 
-```bash
+```shell
 $ cscope
 usage: cscope [-h] {info,cpus,gpus,check-gpu,aws} ...
 ...
