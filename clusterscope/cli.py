@@ -181,9 +181,7 @@ def task():
 
 @task.command()
 @click.option("--num-gpus", type=int, required=True, help="Number of GPUs to request")
-@click.option(
-    "--partition", type=str, default=None, required=True, help="Partition to query"
-)
+@click.option("--partition", type=str, required=True, help="Partition to query")
 @click.option(
     "--num-tasks-per-node",
     type=int,
