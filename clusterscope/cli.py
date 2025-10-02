@@ -195,7 +195,33 @@ def task():
     default="json",
     help="Format to output the job requirements in",
 )
-def slurm(num_gpus: int, num_tasks_per_node: int, output_format: str, partition: str):
+@click.option(
+    "--account",
+    type=str,
+    default=None,
+    help="SLURM account to charge resources to (optional)",
+)
+@click.option(
+    "--qos",
+    type=str,
+    default=None,
+    help="Quality of Service (QoS) specification for the job (optional)",
+)
+@click.option(
+    "--time",
+    type=str,
+    default=None,
+    help="Time limit for the job (format: HH:MM:SS or days-HH:MM:SS, optional)",
+)
+def slurm(
+    num_gpus: int,
+    num_tasks_per_node: int,
+    output_format: str,
+    partition: str,
+    account: str,
+    qos: str,
+    time: str,
+):
     """Generate job requirements for a task of a Slurm job."""
     partitions = get_partition_info()
     partition_names = [p.name for p in partitions]
@@ -210,6 +236,9 @@ def slurm(num_gpus: int, num_tasks_per_node: int, output_format: str, partition:
         partition=partition,
         num_gpus=num_gpus,
         num_tasks_per_node=num_tasks_per_node,
+        account=account,
+        qos=qos,
+        time=time,
     )
 
     # Route to the correct format method based on CLI option
