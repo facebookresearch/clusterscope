@@ -155,7 +155,7 @@ def find_matching_partitions(
         if cpu_ram > partition.max_mem_per_node:
             continue
 
-        # Get CPU cores and CPU allowed based on number of GPUs per node
+        # Get CPU cores and CPU RAM allowed based on number of GPUs per node
         resource = UnifiedInfo(partition=partition.name).get_task_resource_requirements(
             num_gpus=gpus_per_node
         )
