@@ -1,18 +1,6 @@
 import re
 
 
-def extract_gpus_from_gres(gres_string: str) -> int:
-    """Extract the number of gpus from the GRES resources string"""
-    gpus = 0
-    gres_items = gres_string.split(",")
-    for gres in gres_items:
-        # If a gpu resource has been found.
-        if gres.startswith("gpu:"):
-            gpus = parse_gres(gres)
-
-    return gpus
-
-
 def parse_gres(gres_str: str) -> int:
     """Parse GPU count from GRES string.
 

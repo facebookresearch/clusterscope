@@ -4,11 +4,10 @@
 
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
-import subprocess
 from dataclasses import dataclass
 
 from clusterscope.shell import run_cli
-from clusterscope.slurm.parser import extract_gpus_from_gres
+from clusterscope.slurm.parser import parse_gres
 
 
 @dataclass
@@ -20,7 +19,7 @@ class PartitionInfo:
 
 
 def get_partition_resources(partition: str) -> dict:
-    result = subprocess.run(
+    result = run_cli(
         [
             "sinfo",
             "-o",
@@ -28,15 +27,12 @@ def get_partition_resources(partition: str) -> dict:
             f"--partition={partition}",
             "--noheader",
         ],
-        capture_output=True,
-        text=True,
-        check=True,
     )
 
-    stdout = result.stdout.strip().split("\n")[0]
+    stdout = result.strip().split("\n")[0]
 
     return {
-        "max_gpus": extract_gpus_from_gres(stdout),
+        "max_gpus": parse_gres(stdout),
     }
 
 
