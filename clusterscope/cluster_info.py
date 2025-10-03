@@ -168,6 +168,16 @@ class UnifiedInfo:
             return "macos"
         return "local-node"
 
+    def get_tmp_dir(self) -> str:
+        """Get the TMP directory for the current cluster.
+
+        Returns:
+            str: The TMP directory for the current cluster.
+        """
+        if self.is_slurm_cluster and "SLURM_JOB_ID" in os.environ:
+            return self.slurm_cluster_info.get_tmp_dir()
+        return self.local_node_info.get_tmp_dir()
+
     def get_slurm_version(self) -> str:
         """Get the slurm version. Returns `0` if not a Slurm cluster.
 
@@ -698,6 +708,9 @@ class LocalNodeInfo:
         except RuntimeError:
             return False
 
+    def get_tmp_dir(self) -> str:
+        return "/tmp"
+
 
 class SlurmClusterInfo:
     """A class to provide information about the Slurm cluster configuration.
@@ -731,6 +744,9 @@ class SlurmClusterInfo:
             return True
         except (subprocess.SubprocessError, FileNotFoundError):
             return False
+
+    def get_tmp_dir(self) -> str:
+        return f"/scratch/slurm_tmpdir/{os.environ['SLURM_JOB_ID']}/"
 
     @fs_cache(var_name="SLURM_VERSION")
     def get_slurm_version(self, timeout: int = 60) -> str:
