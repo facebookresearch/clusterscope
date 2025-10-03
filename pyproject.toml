@@ -20,7 +20,7 @@ authors = [
   {name = "Kalyan Saladi", email = "skalyan@meta.com"}
 ]
 dependencies = [
-    "click>=8.0.0",
+    "click>=8.0.0, !=8.3.0",
 ]
 
 [project.scripts]
