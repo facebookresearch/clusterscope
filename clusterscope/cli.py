@@ -183,20 +183,20 @@ def task():
 
 @task.command()
 @click.option(
-    "--gpus-per-node",
+    "--gpus-per-task",
     default=0,
     type=click.IntRange(min=0),
-    help="Number of GPUs per node to request",
+    help="Number of GPUs per task to request",
 )
 @click.option(
-    "--cpus-per-node",
+    "--cpus-per-task",
     default=0,
     type=click.IntRange(min=0),
-    help="Number of CPUs per node to request",
+    help="Number of CPUs per task to request",
 )
 @click.option("--partition", type=str, required=True, help="Partition to query")
 @click.option(
-    "--num-tasks-per-node",
+    "--tasks-per-node",
     type=int,
     default=1,
     help="Number of tasks per node to request",
@@ -209,22 +209,22 @@ def task():
     help="Format to output the job requirements in",
 )
 def slurm(
-    gpus_per_node: int,
-    cpus_per_node: int,
-    num_tasks_per_node: int,
+    gpus_per_task: int,
+    cpus_per_task: int,
+    tasks_per_node: int,
     output_format: str,
     partition: str,
 ):
     """Generate job requirements for a task of a Slurm job based on GPU or CPU per node requirements."""
-    if gpus_per_node is None and cpus_per_node is None:
-        logging.error("Either --gpus-per-node or --cpus-per-node must be specified.")
+    if gpus_per_task is None and cpus_per_task is None:
+        logging.error("Either --gpus-per-task or --cpus-per-task must be specified.")
         sys.exit(1)
-    if gpus_per_node == 0 and cpus_per_node == 0:
-        logging.error("One of --gpus-per-node or --cpus-per-node has to be non-zero.")
+    if gpus_per_task == 0 and cpus_per_task == 0:
+        logging.error("One of --gpus-per-task or --cpus-per-task has to be non-zero.")
         sys.exit(1)
-    if gpus_per_node and cpus_per_node:
+    if gpus_per_task and cpus_per_task:
         logging.warning(
-            "Both --gpus-per-node and --cpus-per-node were specified. Assuming this is a GPU request and will generate appropriate CPU allocation per node based on GPU requirements."
+            "Both --gpus-per-task and --cpus-per-task were specified. Assuming this is a GPU request and will generate appropriate CPU allocation per node based on GPU requirements."
         )
 
     partitions = get_partition_info()
@@ -236,26 +236,26 @@ def slurm(
         )
         sys.exit(1)
 
-    # reject if requires more GPUs than the max GPUs at the partition
-    if gpus_per_node > req_partition.max_gpus_per_node:
+    # reject if requires more GPUs than the max GPUs per node for the partition
+    if gpus_per_task * tasks_per_node > req_partition.max_gpus_per_node:
         logging.error(
-            f"Requested {gpus_per_node} GPUs exceeds the maximum {req_partition.max_gpus_per_node} GPUs per node available in partition '{partition}'"
+            f"Requested {gpus_per_task=} GPUs with {tasks_per_node=} exceeds the maximum {req_partition.max_gpus_per_node} GPUs per node available in partition '{partition}'"
         )
         sys.exit(1)
 
     # reject if requires more CPUs than the max CPUs at the partition
-    if cpus_per_node > req_partition.max_cpus_per_node:
+    if cpus_per_task * tasks_per_node > req_partition.max_cpus_per_node:
         logging.error(
-            f"Requested {cpus_per_node} CPUs exceeds the maximum {req_partition.max_cpus_per_node} CPUs per node available in partition '{partition}'"
+            f"Requested {cpus_per_task=} CPUs with {tasks_per_node=} exceeds the maximum {req_partition.max_cpus_per_node} CPUs per node available in partition '{partition}'"
         )
         sys.exit(1)
 
     unified_info = UnifiedInfo(partition=partition)
     job_requirements = unified_info.get_task_resource_requirements(
         partition=partition,
-        cpus_per_node=cpus_per_node,
-        gpus_per_node=gpus_per_node,
-        num_tasks_per_node=num_tasks_per_node,
+        cpus_per_task=cpus_per_task,
+        gpus_per_task=gpus_per_task,
+        tasks_per_node=tasks_per_node,
     )
 
     # Route to the correct format method based on CLI option
@@ -271,7 +271,7 @@ def slurm(
 
 @job_gen.command()
 @click.option(
-    "--num-gpus-per-task", type=int, required=True, help="Number of GPUs per task"
+    "--gpus-per-task", type=int, required=True, help="Number of GPUs per task"
 )
 @click.option(
     "--format",
@@ -286,12 +286,12 @@ def slurm(
     default=None,
     help="Slurm partition name to filter queries (optional)",
 )
-def array(num_gpus_per_task: int, output_format: str, partition: str):
+def array(gpus_per_task: int, output_format: str, partition: str):
     """Generate job requirements for an array job."""
     unified_info = UnifiedInfo(partition=partition)
     job_requirements = unified_info.get_array_job_requirements(
         partition=partition,
-        num_gpus_per_task=num_gpus_per_task,
+        gpus_per_task=gpus_per_task,
     )
 
     # Route to the correct format method based on CLI option
