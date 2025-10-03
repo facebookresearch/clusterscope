@@ -191,7 +191,7 @@ def task():
 @click.option(
     "--format",
     "output_format",
-    type=click.Choice(["json", "sbatch", "srun", "submitit"]),
+    type=click.Choice(["json", "sbatch", "srun", "submitit", "salloc"]),
     default="json",
     help="Format to output the job requirements in",
 )
@@ -224,6 +224,7 @@ def slurm(num_gpus: int, num_tasks_per_node: int, output_format: str, partition:
         "sbatch": job_requirements.to_sbatch,
         "srun": job_requirements.to_srun,
         "submitit": job_requirements.to_submitit,
+        "salloc": job_requirements.to_salloc,
     }
     click.echo(format_methods[output_format]())
 
@@ -235,7 +236,7 @@ def slurm(num_gpus: int, num_tasks_per_node: int, output_format: str, partition:
 @click.option(
     "--format",
     "output_format",
-    type=click.Choice(["json", "sbatch", "srun", "submitit"]),
+    type=click.Choice(["json", "sbatch", "srun", "submitit", "salloc"]),
     default="json",
     help="Format to output the job requirements in",
 )
@@ -258,6 +259,7 @@ def array(num_gpus_per_task: int, output_format: str, partition: str):
         "json": job_requirements.to_json,
         "sbatch": job_requirements.to_sbatch,
         "srun": job_requirements.to_srun,
+        "salloc": job_requirements.to_salloc,
         "submitit": job_requirements.to_submitit,
     }
     click.echo(format_methods[output_format]())

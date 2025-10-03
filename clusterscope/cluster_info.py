@@ -78,6 +78,22 @@ class ResourceShape(NamedTuple):
         ]
         return " ".join(cmd_parts)
 
+    def to_salloc(self) -> str:
+        """Convert ResourceShape to salloc command format.
+
+        Returns:
+            str: salloc command with resource specifications
+        """
+        cmd_parts = [
+            "salloc",
+            f"--cpus-per-task={self.cpu_cores}",
+            f"--mem={self.memory}",
+            f"--ntasks-per-node={self.tasks_per_node}",
+            f"--gres=gpu:{self.gpus_per_node}",
+            f"--partition={self.slurm_partition}",
+        ]
+        return " ".join(cmd_parts)
+
     def to_submitit(self) -> str:
         """Convert ResourceShape to submitit parameters format.
 
