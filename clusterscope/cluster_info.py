@@ -200,10 +200,10 @@ class UnifiedInfo:
         return "local-node"
 
     def get_tmp_dir(self) -> str:
-        """Get the TPM directory for the current cluster.
+        """Get the TMP directory for the current cluster.
 
         Returns:
-            str: The TPM directory for the current cluster.
+            str: The TMP directory for the current cluster.
         """
         if self.is_slurm_cluster and "SLURM_JOB_ID" in os.environ:
             return self.slurm_cluster_info.get_tmp_dir()
