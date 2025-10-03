@@ -98,7 +98,7 @@ def job_gen_task_slurm(
     gpus_per_task: int = 0,
     cpus_per_task: int = 0,
     tasks_per_node: int = 1,
-) -> int:
+) -> dict:
     """Get the number of CPUs/RAM for each task in the job."""
     job_gen_task_slurm_validator(
         partition=partition,

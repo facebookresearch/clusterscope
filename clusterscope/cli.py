@@ -221,6 +221,7 @@ def slurm(
         gpus_per_task=gpus_per_task,
         cpus_per_task=cpus_per_task,
         tasks_per_node=tasks_per_node,
+        exit_on_error=True,
     )
 
     unified_info = UnifiedInfo(partition=partition)
