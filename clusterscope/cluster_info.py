@@ -257,9 +257,9 @@ class UnifiedInfo:
     def get_task_resource_requirements(
         self,
         partition: str,
-        cpus_per_node: int,
         gpus_per_node: int,
         num_tasks_per_node: int = 1,
+        cpus_per_node: int = 0,
         **kwargs,
     ) -> ResourceShape:
         """Calculate resource requirements for better GPU packing based on node's GPU configuration.
@@ -272,16 +272,13 @@ class UnifiedInfo:
         per-array-element resource allocation.
 
         Args:
-            num_gpus (int): Total number of GPUs required per node (1 to max available)
+            gpus_per_node (int): Total number of GPUs required per node (1 to max available)
             num_tasks_per_node (int): Number of tasks to run per node (default: 1)
 
         Returns:
             ResourceShape: Tuple containing CPU cores per task (int), memory per node (str),
                           and tasks per node (int) in Slurm format
                           e.g., ResourceShape(cpu_cores=24, memory="225G", tasks_per_node=1)
-
-        Raises:
-            ValueError: If num_gpus is not between 1 and max available GPUs, or if num_tasks_per_node < 1
         """
         assert not (gpus_per_node is None and cpus_per_node is None)
         if num_tasks_per_node < 1:

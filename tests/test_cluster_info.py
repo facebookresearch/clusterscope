@@ -718,7 +718,7 @@ class TestResourceRequirementMethods(unittest.TestCase):
         mock_mem.return_value = 1843200  # 1.8TB in MB
 
         result = self.unified_info.get_task_resource_requirements(
-            partition="test_partition", num_gpus=1
+            partition="test_partition", gpus_per_node=1
         )
 
         self.assertEqual(result.cpu_cores, 24)  # 192/8 = 24
@@ -737,7 +737,7 @@ class TestResourceRequirementMethods(unittest.TestCase):
         mock_mem.return_value = 1843200
 
         result = self.unified_info.get_task_resource_requirements(
-            partition="test_partition", num_gpus=4
+            partition="test_partition", gpus_per_node=4
         )
 
         self.assertEqual(result.cpu_cores, 96)  # 192/8*4 = 96
@@ -756,7 +756,7 @@ class TestResourceRequirementMethods(unittest.TestCase):
         mock_mem.return_value = 1843200
 
         result = self.unified_info.get_task_resource_requirements(
-            partition="test_partition", num_gpus=8
+            partition="test_partition", gpus_per_node=8
         )
 
         self.assertEqual(result.cpu_cores, 192)  # All CPUs
@@ -776,14 +776,14 @@ class TestResourceRequirementMethods(unittest.TestCase):
 
         # Test 1 GPU on 4-GPU node
         result = self.unified_info.get_task_resource_requirements(
-            partition="test_partition", num_gpus=1
+            partition="test_partition", gpus_per_node=1
         )
         self.assertEqual(result.cpu_cores, 16)  # 64/4 = 16
         self.assertEqual(result.memory, "128G")  # 524288/4/1024 = 128GB
 
         # Test full 4-GPU node
         result = self.unified_info.get_task_resource_requirements(
-            partition="test_partition", num_gpus=4
+            partition="test_partition", gpus_per_node=4
         )
         self.assertEqual(result.cpu_cores, 64)  # All CPUs
         self.assertEqual(result.memory, "512G")  # All memory
@@ -800,7 +800,7 @@ class TestResourceRequirementMethods(unittest.TestCase):
         mock_mem.return_value = 1843200
 
         result = self.unified_info.get_task_resource_requirements(
-            partition="test_partition", num_gpus=4, num_tasks_per_node=2
+            partition="test_partition", gpus_per_node=4, num_tasks_per_node=2
         )
 
         self.assertEqual(result.cpu_cores, 48)  # (192/8*4)/2 = 48 per task
@@ -819,7 +819,7 @@ class TestResourceRequirementMethods(unittest.TestCase):
         mock_mem.return_value = 8388608  # 8TB in MB
 
         result = self.unified_info.get_task_resource_requirements(
-            partition="test_partition", num_gpus=8
+            partition="test_partition", gpus_per_node=8
         )
 
         self.assertEqual(result.memory, "8192G")  # 8388608/1024 = 8192GB
@@ -836,30 +836,11 @@ class TestResourceRequirementMethods(unittest.TestCase):
         mock_mem.return_value = 1843200
 
         result = self.unified_info.get_task_resource_requirements(
-            partition="test_partition", num_gpus=1
+            partition="test_partition", gpus_per_node=1
         )
 
         # 191/8 = 23.875, should round up to 24
         self.assertEqual(result.cpu_cores, 24)
-
-    @patch.object(UnifiedInfo, "get_total_gpus_per_node")
-    def test_getResRequirements_invalid_num_gpus(self, mock_total_gpus):
-        """Test getResRequirements raises ValueError for invalid num_gpus."""
-        mock_total_gpus.return_value = 8
-
-        # Test zero GPUs
-        with self.assertRaises(ValueError) as context:
-            self.unified_info.get_task_resource_requirements(
-                partition="test_partition", num_gpus=0
-            )
-        self.assertIn("num_gpus must be between 1 and 8", str(context.exception))
-
-        # Test more than max GPUs
-        with self.assertRaises(ValueError) as context:
-            self.unified_info.get_task_resource_requirements(
-                partition="test_partition", num_gpus=9
-            )
-        self.assertIn("num_gpus must be between 1 and 8", str(context.exception))
 
     @patch.object(UnifiedInfo, "get_total_gpus_per_node")
     def test_getResRequirements_invalid_num_tasks_per_node(self, mock_total_gpus):
@@ -868,7 +849,7 @@ class TestResourceRequirementMethods(unittest.TestCase):
 
         with self.assertRaises(ValueError) as context:
             self.unified_info.get_task_resource_requirements(
-                partition="test_partition", num_gpus=1, num_tasks_per_node=0
+                partition="test_partition", gpus_per_node=1, num_tasks_per_node=0
             )
         self.assertIn("num_tasks_per_node must be at least 1", str(context.exception))
 
@@ -1004,52 +985,6 @@ class TestResourceRequirementMethods(unittest.TestCase):
 
         result = self.unified_info.get_total_gpus_per_node()
         self.assertEqual(result, 8)  # 2 + 4 + 2 = 8
-
-    @patch.object(UnifiedInfo, "get_total_gpus_per_node")
-    @patch.object(UnifiedInfo, "get_cpus_per_node")
-    @patch.object(UnifiedInfo, "get_mem_per_node_MB")
-    def test_dynamic_gpu_boundary_validation(
-        self, mock_mem, mock_cpus, mock_total_gpus
-    ):
-        """Test that validation boundaries adapt to detected GPU count."""
-        # Test with 4-GPU node
-        mock_total_gpus.return_value = 4
-        mock_cpus.return_value = 64
-        mock_mem.return_value = 524288
-
-        # Valid requests for 4-GPU node
-        result = self.unified_info.get_task_resource_requirements(
-            partition="test_partition", num_gpus=1
-        )
-        self.assertIsInstance(result, ResourceShape)
-
-        result = self.unified_info.get_task_resource_requirements(
-            partition="test_partition", num_gpus=4
-        )
-        self.assertIsInstance(result, ResourceShape)
-
-        # Invalid request (more than available)
-        with self.assertRaises(ValueError) as context:
-            self.unified_info.get_task_resource_requirements(
-                partition="test_partition", num_gpus=5
-            )
-        self.assertIn("num_gpus must be between 1 and 4", str(context.exception))
-
-        # Test with 16-GPU node
-        mock_total_gpus.return_value = 16
-
-        # Should now accept up to 16 GPUs
-        result = self.unified_info.get_task_resource_requirements(
-            partition="test_partition", num_gpus=16
-        )
-        self.assertIsInstance(result, ResourceShape)
-
-        # But not 17
-        with self.assertRaises(ValueError) as context:
-            self.unified_info.get_task_resource_requirements(
-                partition="test_partition", num_gpus=17
-            )
-        self.assertIn("num_gpus must be between 1 and 16", str(context.exception))
 
     def test_resource_shape_namedtuple(self):
         """Test ResourceShape NamedTuple structure."""
