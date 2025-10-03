@@ -35,7 +35,7 @@ def get_partition_resources(partition: str) -> dict:
 
     return {
         "max_gpus": parse_gres(gres),
-        "max_cpus": cpus,
+        "max_cpus": int(cpus),
     }
 
 
