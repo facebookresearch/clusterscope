@@ -88,6 +88,11 @@ def mem(
     return mem
 
 
+def get_tmp_dir():
+    tmp = get_unified_info().get_tmp_dir()
+    return tmp
+
+
 def local_node_gpu_generation_and_count() -> Dict[str, int]:
     """Get the GPU generation and count for the local node."""
     return local_info.get_gpu_generation_and_count()
