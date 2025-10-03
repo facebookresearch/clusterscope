@@ -40,6 +40,8 @@ class ResourceShape(NamedTuple):
         """
         data = {k: v for k, v in self._asdict().items() if v is not None}
         data["mem_gb"] = parse_memory_to_gb(data["memory"])
+        if self.gpus_per_node == 0:
+            data.pop("gpus_per_node")
         return json.dumps(data, indent=2)
 
     def to_sbatch(self) -> str:
@@ -53,9 +55,10 @@ class ResourceShape(NamedTuple):
             f"#SBATCH --cpus-per-task={self.cpu_cores}",
             f"#SBATCH --mem={self.memory}",
             f"#SBATCH --ntasks-per-node={self.tasks_per_node}",
-            f"#SBATCH --gres=gpu:{self.gpus_per_node}",
             f"#SBATCH --partition={self.slurm_partition}",
         ]
+        if self.gpus_per_node > 0:
+            lines.append(f"#SBATCH --gres=gpu:{self.gpus_per_node}")
         for attr_name in ["account", "qos", "time"]:
             value = getattr(self, attr_name)
             if value is not None:
@@ -78,6 +81,8 @@ class ResourceShape(NamedTuple):
             f"--gres=gpu:{self.gpus_per_node}",
             f"--partition={self.slurm_partition}",
         ]
+        if self.gpus_per_node > 0:
+            cmd_parts.append(f"--gres=gpu:{self.gpus_per_node}")
         for attr_name in ["account", "qos", "time"]:
             value = getattr(self, attr_name)
             if value is not None:
@@ -98,14 +103,16 @@ class ResourceShape(NamedTuple):
             "cpus_per_task": self.cpu_cores,
             "mem_gb": mem_gb,
         }
-        for attr_name in [
+        attrs = [
             "slurm_partition",
             "tasks_per_node",
-            "gpus_per_node",
             "account",
             "qos",
             "time",
-        ]:
+        ]
+        if self.gpus_per_node > 0:
+            attrs.append("gpus_per_node")
+        for attr_name in attrs:
             value = getattr(self, attr_name)
             if value is not None:
                 params[attr_name] = value
@@ -250,7 +257,8 @@ class UnifiedInfo:
     def get_task_resource_requirements(
         self,
         partition: str,
-        num_gpus: int,
+        cpus_per_node: int,
+        gpus_per_node: int,
         num_tasks_per_node: int = 1,
         **kwargs,
     ) -> ResourceShape:
@@ -275,51 +283,47 @@ class UnifiedInfo:
         Raises:
             ValueError: If num_gpus is not between 1 and max available GPUs, or if num_tasks_per_node < 1
         """
-        # Get the total number of GPUs available per node
-        max_gpus_per_node = self.get_total_gpus_per_node()
-
-        if not (1 <= num_gpus <= max_gpus_per_node):
-            raise ValueError(f"num_gpus must be between 1 and {max_gpus_per_node}")
-
+        assert not (gpus_per_node is None and cpus_per_node is None)
         if num_tasks_per_node < 1:
             raise ValueError("num_tasks_per_node must be at least 1")
 
-        # Get total resources per node
-        total_cpu_cores = self.get_cpus_per_node()
-        total_ram_mb = self.get_mem_per_node_MB()
+        # CPU Request
+        if gpus_per_node == 0:
+            total_cpus_per_node = self.get_cpus_per_node()
+            total_ram_per_node = self.get_mem_per_node_MB()
 
-        if num_gpus == max_gpus_per_node:
-            # For max GPUs, use all available resources
-            total_required_cpu_cores = total_cpu_cores
-            total_required_ram_mb = total_ram_mb
+            ram_mb_per_cpu = total_ram_per_node / total_cpus_per_node
+            total_required_ram_mb = math.ceil(ram_mb_per_cpu * cpus_per_node)
+            cpu_cores = cpus_per_node
+        # GPU Request
         else:
-            # Calculate per-GPU allocation based on actual GPU count per node
-            cpu_cores_per_gpu = total_cpu_cores / max_gpus_per_node
-            ram_mb_per_gpu = total_ram_mb / max_gpus_per_node
+            total_gpus_per_node = self.get_total_gpus_per_node()
+            total_cpu_cores = self.get_cpus_per_node()
+            total_ram_mb = self.get_mem_per_node_MB()
 
-            # Calculate total requirements for the requested number of GPUs
-            total_required_cpu_cores = math.ceil(cpu_cores_per_gpu * num_gpus)
-            total_required_ram_mb = math.ceil(ram_mb_per_gpu * num_gpus)
+            cpu_cores_per_gpu = total_cpu_cores / total_gpus_per_node
+            total_required_cpu_cores = math.ceil(cpu_cores_per_gpu * gpus_per_node)
 
-        # Calculate per-task CPU allocation
-        cpu_cores_per_task = total_required_cpu_cores / num_tasks_per_node
+            ram_mb_per_gpu = total_ram_mb / total_gpus_per_node
+            total_required_ram_mb = math.ceil(ram_mb_per_gpu * gpus_per_node)
 
-        # Convert to Slurm SBATCH format
-        # CPU cores per task: Round up to ensure we don't under-allocate
-        sbatch_cpu_cores = math.ceil(cpu_cores_per_task)
+            cpu_cores_per_task = total_required_cpu_cores / num_tasks_per_node
+
+            # CPU cores per task: Round up to ensure we don't under-allocate
+            cpu_cores = math.ceil(cpu_cores_per_task)
 
         # Memory per node: Convert MB to GB and format for Slurm
         # Note: Memory is allocated per node, not per task in most Slurm configurations
         required_ram_gb = total_required_ram_mb // 1024
         # Default to GB for higher precision
-        sbatch_memory = f"{required_ram_gb:.0f}G"
+        memory = f"{required_ram_gb:.0f}G"
 
         return ResourceShape(
             slurm_partition=partition,
-            cpu_cores=sbatch_cpu_cores,
-            memory=sbatch_memory,
+            cpu_cores=cpu_cores,
+            memory=memory,
             tasks_per_node=num_tasks_per_node,
-            gpus_per_node=num_gpus,
+            gpus_per_node=gpus_per_node,
             **kwargs,
         )
 

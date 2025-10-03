@@ -5,6 +5,8 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 import json
+import logging
+import sys
 from typing import Any, Dict
 
 import click
@@ -180,7 +182,18 @@ def task():
 
 
 @task.command()
-@click.option("--num-gpus", type=int, required=True, help="Number of GPUs to request")
+@click.option(
+    "--gpus-per-node",
+    default=0,
+    type=click.IntRange(min=0),
+    help="Number of GPUs per node to request",
+)
+@click.option(
+    "--cpus-per-node",
+    default=0,
+    type=click.IntRange(min=0),
+    help="Number of CPUs per node to request",
+)
 @click.option("--partition", type=str, required=True, help="Partition to query")
 @click.option(
     "--num-tasks-per-node",
@@ -215,7 +228,8 @@ def task():
 )
 @click.option("--slurm-cmd", default=None, help="Command to run on Slurm")
 def slurm(
-    num_gpus: int,
+    gpus_per_node: int,
+    cpus_per_node: int,
     num_tasks_per_node: int,
     output_format: str,
     partition: str,
@@ -224,25 +238,46 @@ def slurm(
     time: str,
     slurm_cmd: str,
 ):
-    """Generate job requirements for a task of a Slurm job."""
+    """Generate job requirements for a task of a Slurm job based on GPU or CPU per node requirements."""
+    if gpus_per_node is None and cpus_per_node is None:
+        logging.error("Either --gpus-per-node or --cpus-per-node must be specified.")
+        sys.exit(1)
+    if gpus_per_node == 0 and cpus_per_node == 0:
+        logging.error("One of --gpus-per-node or --cpus-per-node has to be non-zero.")
+        sys.exit(1)
+    if gpus_per_node and cpus_per_node:
+        logging.warning(
+            "Both --gpus-per-node and --cpus-per-node were specified. Assuming this is a GPU request and will generate appropriate CPU allocation per node based on GPU requirements."
+        )
+
     partitions = get_partition_info()
     req_partition = next((p for p in partitions if p.name == partition), None)
 
     if req_partition is None:
-        raise ValueError(
+        logging.error(
             f"Partition {partition} not found. Available partitions: {[p.name for p in partitions]}"
         )
+        sys.exit(1)
 
     # reject if requires more GPUs than the max GPUs at the partition
-    if num_gpus > req_partition.max_gpus_per_node:
-        raise ValueError(
-            f"Requested {num_gpus} GPUs exceeds the maximum {req_partition.max_gpus_per_node} GPUs per node available in partition '{partition}'"
+    if gpus_per_node > req_partition.max_gpus_per_node:
+        logging.error(
+            f"Requested {gpus_per_node} GPUs exceeds the maximum {req_partition.max_gpus_per_node} GPUs per node available in partition '{partition}'"
         )
+        sys.exit(1)
+
+    # reject if requires more CPUs than the max CPUs at the partition
+    if cpus_per_node > req_partition.max_cpus_per_node:
+        logging.error(
+            f"Requested {cpus_per_node} CPUs exceeds the maximum {req_partition.max_cpus_per_node} CPUs per node available in partition '{partition}'"
+        )
+        sys.exit(1)
 
     unified_info = UnifiedInfo(partition=partition)
     job_requirements = unified_info.get_task_resource_requirements(
         partition=partition,
-        num_gpus=num_gpus,
+        cpus_per_node=cpus_per_node,
+        gpus_per_node=gpus_per_node,
         num_tasks_per_node=num_tasks_per_node,
         account=account,
         qos=qos,

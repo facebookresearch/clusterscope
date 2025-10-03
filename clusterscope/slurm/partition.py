@@ -16,6 +16,7 @@ class PartitionInfo:
     """Store partition information from scontrol."""
 
     name: str
+    max_cpus_per_node: int
     max_gpus_per_node: int
 
 
@@ -31,6 +32,7 @@ def get_node_resources(node_spec: str) -> dict:
     )
 
     max_gpus = 0
+    max_cpus = 0
 
     for line in result.stdout.strip().split("\n"):
         if not line:
@@ -42,11 +44,15 @@ def get_node_resources(node_spec: str) -> dict:
                 key, value = item.split("=", 1)
                 node_data[key] = value
 
+        cpus = int(node_data.get("CPUTot", 0))
+        max_cpus = max(max_cpus, cpus)
+
         gres = node_data.get("Gres", "")
         gpu_count = extract_gpus_from_gres(gres)
         max_gpus = max(max_gpus, gpu_count)
 
     return {
+        "max_cpus": max_cpus,
         "max_gpus": max_gpus,
     }
 
@@ -78,11 +84,13 @@ def get_partition_info() -> list[PartitionInfo]:
             node_info = get_node_resources(nodes)
         else:
             node_info = {
+                "max_cpus": 0,
                 "max_gpus": 0,
             }
 
         partition = PartitionInfo(
             name=name,
+            max_cpus_per_node=node_info["max_cpus"],
             max_gpus_per_node=node_info["max_gpus"],
         )
         partitions.append(partition)
