@@ -16,6 +16,7 @@ class PartitionInfo:
 
     name: str
     max_gpus_per_node: int
+    max_cpus_per_node: int
 
 
 def get_partition_resources(partition: str) -> dict:
@@ -23,16 +24,18 @@ def get_partition_resources(partition: str) -> dict:
         [
             "sinfo",
             "-o",
-            "%G",
+            "%G,%c",
             f"--partition={partition}",
             "--noheader",
         ],
     )
 
     stdout = result.strip().split("\n")[0]
+    gres, cpus = stdout.split(",")
 
     return {
-        "max_gpus": parse_gres(stdout),
+        "max_gpus": parse_gres(gres),
+        "max_cpus": int(cpus),
     }
 
 
@@ -64,10 +67,12 @@ def get_partition_info() -> list[PartitionInfo]:
         else:
             partition_info = {
                 "max_gpus": 0,
+                "max_cpus": 0,
             }
 
         partition = PartitionInfo(
             name=partition_name,
+            max_cpus_per_node=partition_info["max_cpus"],
             max_gpus_per_node=partition_info["max_gpus"],
         )
         partitions.append(partition)

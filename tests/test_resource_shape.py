@@ -10,7 +10,7 @@ from clusterscope.cluster_info import ResourceShape
 from clusterscope.parser import parse_memory_to_gb
 
 TEST_CONFIGS = [
-    # (partition, gpus_per_node, cpu_cores, memory, tasks_per_node, expected_mem_gb)
+    # (partition, gpus_per_task, cpus_per_task, memory, tasks_per_node, expected_mem_gb)
     ("test_partition", 4, 24, "225G", 1, 225),
     ("test_partition", 4, 64, "1T", 2, 1024),
     ("test_partition", 4, 8, "32G", 1, 32),
@@ -27,15 +27,15 @@ class TestResourceShape(unittest.TestCase):
         """Test ResourceShape creation and basic properties."""
         resource = ResourceShape(
             slurm_partition="test_partition",
-            gpus_per_node=1,
-            cpu_cores=24,
+            gpus_per_task=1,
+            cpus_per_task=24,
             memory="225G",
             tasks_per_node=1,
         )
 
         # Test immutability (NamedTuple characteristic)
         with self.assertRaises(AttributeError):
-            resource.cpu_cores = 48
+            resource.cpus_per_task = 48
 
     def test_memory_parsing(self):
         """Test memory parsing with various formats."""
@@ -57,8 +57,8 @@ class TestResourceShape(unittest.TestCase):
             with self.subTest(memory=memory_str, expected=expected_gb):
                 resource = ResourceShape(
                     slurm_partition="test_partition",
-                    gpus_per_node=1,
-                    cpu_cores=8,
+                    gpus_per_task=1,
+                    cpus_per_task=8,
                     memory=memory_str,
                     tasks_per_node=1,
                 )
@@ -69,27 +69,27 @@ class TestResourceShape(unittest.TestCase):
 
         for (
             partition,
-            gpus_per_node,
-            cpu_cores,
+            gpus_per_task,
+            cpus_per_task,
             memory,
             tasks_per_node,
             expected_mem_gb,
         ) in TEST_CONFIGS:
             with self.subTest(
-                config=f"{gpus_per_node}gpu_{cpu_cores}cpu_{memory}_{tasks_per_node}tasks"
+                config=f"{gpus_per_task}gpu_{cpus_per_task}cpu_{memory}_{tasks_per_node}tasks"
             ):
                 resource = ResourceShape(
                     slurm_partition=partition,
-                    gpus_per_node=gpus_per_node,
-                    cpu_cores=cpu_cores,
+                    gpus_per_task=gpus_per_task,
+                    cpus_per_task=cpus_per_task,
                     memory=memory,
                     tasks_per_node=tasks_per_node,
                 )
                 result = json.loads(resource.to_json())
 
                 self.assertEqual(result["slurm_partition"], partition)
-                self.assertEqual(result["gpus_per_node"], gpus_per_node)
-                self.assertEqual(result["cpu_cores"], cpu_cores)
+                self.assertEqual(result["gpus_per_task"], gpus_per_task)
+                self.assertEqual(result["cpus_per_task"], cpus_per_task)
                 self.assertEqual(result["memory"], memory)
                 self.assertEqual(result["tasks_per_node"], tasks_per_node)
                 self.assertEqual(result["mem_gb"], expected_mem_gb)
@@ -99,19 +99,19 @@ class TestResourceShape(unittest.TestCase):
 
         for (
             partition,
-            gpus_per_node,
-            cpu_cores,
+            gpus_per_task,
+            cpus_per_task,
             memory,
             tasks_per_node,
             _,
         ) in TEST_CONFIGS:
             with self.subTest(
-                config=f"{gpus_per_node}gpu_{cpu_cores}cpu_{memory}_{tasks_per_node}tasks"
+                config=f"{gpus_per_task}gpu_{cpus_per_task}cpu_{memory}_{tasks_per_node}tasks"
             ):
                 resource = ResourceShape(
                     slurm_partition=partition,
-                    gpus_per_node=gpus_per_node,
-                    cpu_cores=cpu_cores,
+                    gpus_per_task=gpus_per_task,
+                    cpus_per_task=cpus_per_task,
                     memory=memory,
                     tasks_per_node=tasks_per_node,
                 )
@@ -120,30 +120,30 @@ class TestResourceShape(unittest.TestCase):
 
                 self.assertEqual(lines[0], "#!/bin/bash")
                 sbatch_lines = [line for line in lines if line.startswith("#SBATCH")]
-                self.assertIn(f"#SBATCH --cpus-per-task={cpu_cores}", result)
+                self.assertIn(f"#SBATCH --cpus-per-task={cpus_per_task}", result)
                 self.assertIn(f"#SBATCH --mem={memory}", result)
                 self.assertIn(f"#SBATCH --ntasks-per-node={tasks_per_node}", result)
                 self.assertIn(f"#SBATCH --partition={partition}", result)
-                self.assertIn(f"#SBATCH --gres=gpu:{gpus_per_node}", result)
+                self.assertIn(f"#SBATCH --gpus-per-task={gpus_per_task}", result)
 
     def test_to_srun(self):
         """Test to_srun format method with various configurations."""
 
         for (
             partition,
-            gpus_per_node,
-            cpu_cores,
+            gpus_per_task,
+            cpus_per_task,
             memory,
             tasks_per_node,
             _,
         ) in TEST_CONFIGS:
             with self.subTest(
-                config=f"{gpus_per_node}gpu_{cpu_cores}cpu_{memory}_{tasks_per_node}tasks"
+                config=f"{gpus_per_task}gpu_{cpus_per_task}cpu_{memory}_{tasks_per_node}tasks"
             ):
                 resource = ResourceShape(
                     slurm_partition=partition,
-                    gpus_per_node=gpus_per_node,
-                    cpu_cores=cpu_cores,
+                    gpus_per_task=gpus_per_task,
+                    cpus_per_task=cpus_per_task,
                     memory=memory,
                     tasks_per_node=tasks_per_node,
                 )
@@ -152,38 +152,38 @@ class TestResourceShape(unittest.TestCase):
 
                 parts = result.split()
                 self.assertEqual(parts[0], "srun")
-                self.assertIn(f"--cpus-per-task={cpu_cores}", result)
+                self.assertIn(f"--cpus-per-task={cpus_per_task}", result)
                 self.assertIn(f"--mem={memory}", result)
                 self.assertIn(f"--ntasks-per-node={tasks_per_node}", result)
                 self.assertIn(f"--partition={partition}", result)
-                self.assertIn(f"--gres=gpu:{gpus_per_node}", result)
+                self.assertIn(f"--gpus-per-task={gpus_per_task}", result)
 
     def test_to_submitit(self):
         """Test to_submitit format method with various configurations."""
 
         for (
             partition,
-            gpus_per_node,
-            cpu_cores,
+            gpus_per_task,
+            cpus_per_task,
             memory,
             tasks_per_node,
             expected_mem_gb,
         ) in TEST_CONFIGS:
             with self.subTest(
-                config=f"{gpus_per_node}gpu_{cpu_cores}cpu_{memory}_{tasks_per_node}tasks"
+                config=f"{gpus_per_task}gpu_{cpus_per_task}cpu_{memory}_{tasks_per_node}tasks"
             ):
                 resource = ResourceShape(
                     slurm_partition=partition,
-                    gpus_per_node=gpus_per_node,
-                    cpu_cores=cpu_cores,
+                    gpus_per_task=gpus_per_task,
+                    cpus_per_task=cpus_per_task,
                     memory=memory,
                     tasks_per_node=tasks_per_node,
                 )
                 result = json.loads(resource.to_submitit())
 
                 self.assertEqual(result["slurm_partition"], partition)
-                self.assertEqual(result["gpus_per_node"], gpus_per_node)
-                self.assertEqual(result["cpus_per_task"], cpu_cores)
+                self.assertEqual(result["gpus_per_task"], gpus_per_task)
+                self.assertEqual(result["cpus_per_task"], cpus_per_task)
                 self.assertEqual(result["mem_gb"], expected_mem_gb)
                 self.assertEqual(result["tasks_per_node"], tasks_per_node)
 
