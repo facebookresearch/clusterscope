@@ -7,6 +7,7 @@
 from dataclasses import dataclass
 
 from clusterscope.shell import run_cli
+from clusterscope.slurm.parser import parse_gres
 
 
 @dataclass
@@ -14,6 +15,25 @@ class PartitionInfo:
     """Store partition information from scontrol."""
 
     name: str
+    max_gpus_per_node: int
+
+
+def get_partition_resources(partition: str) -> dict:
+    result = run_cli(
+        [
+            "sinfo",
+            "-o",
+            "%G",
+            f"--partition={partition}",
+            "--noheader",
+        ],
+    )
+
+    stdout = result.strip().split("\n")[0]
+
+    return {
+        "max_gpus": parse_gres(stdout),
+    }
 
 
 def get_partition_info() -> list[PartitionInfo]:
@@ -22,6 +42,8 @@ def get_partition_info() -> list[PartitionInfo]:
     Returns a list of PartitionInfo objects.
     """
     result = run_cli(["scontrol", "show", "partition", "-o"])
+
+    max_gpus = 0
 
     partitions = []
     for line in result.strip().split("\n"):
@@ -34,11 +56,19 @@ def get_partition_info() -> list[PartitionInfo]:
                 key, value = item.split("=", 1)
                 partition_data[key] = value
 
-        # Extract partition name
-        name = partition_data.get("PartitionName", "Unknown")
+        partition_name = partition_data.get("PartitionName", "Unknown")
+
+        nodes = partition_data.get("Nodes", "")
+        if nodes and nodes != "(null)":
+            partition_info = get_partition_resources(partition=partition_name)
+        else:
+            partition_info = {
+                "max_gpus": 0,
+            }
 
         partition = PartitionInfo(
-            name=name,
+            name=partition_name,
+            max_gpus_per_node=partition_info["max_gpus"],
         )
         partitions.append(partition)
 

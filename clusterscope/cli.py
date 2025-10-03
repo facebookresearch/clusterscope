@@ -198,11 +198,17 @@ def task():
 def slurm(num_gpus: int, num_tasks_per_node: int, output_format: str, partition: str):
     """Generate job requirements for a task of a Slurm job."""
     partitions = get_partition_info()
-    partition_names = [p.name for p in partitions]
+    req_partition = next((p for p in partitions if p.name == partition), None)
 
-    if partition not in partition_names:
+    if req_partition is None:
         raise ValueError(
-            f"Partition {partition} not found. Available partitions: {partition_names}"
+            f"Partition {partition} not found. Available partitions: {[p.name for p in partitions]}"
+        )
+
+    # reject if requires more GPUs than the max GPUs at the partition
+    if num_gpus > req_partition.max_gpus_per_node:
+        raise ValueError(
+            f"Requested {num_gpus} GPUs exceeds the maximum {req_partition.max_gpus_per_node} GPUs per node available in partition '{partition}'"
         )
 
     unified_info = UnifiedInfo(partition=partition)
