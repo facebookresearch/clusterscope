@@ -19,35 +19,24 @@ class PartitionInfo:
     max_gpus_per_node: int
 
 
-def get_node_resources(node_spec: str) -> dict:
-    """
-    Query node resources for given node specification.
-    Returns dict with max resources across nodes in the spec.
-    """
-    # not checking the return code here because `scontrol show node` can return non-zero exit code even
-    # though stdout has what we need.
+def get_partition_resources(partition: str) -> dict:
     result = subprocess.run(
-        ["scontrol", "show", "node", node_spec, "-o"], capture_output=True, text=True
+        [
+            "sinfo",
+            "-o",
+            "%G",
+            f"--partition={partition}",
+            "--noheader",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
     )
 
-    max_gpus = 0
-
-    for line in result.stdout.strip().split("\n"):
-        if not line:
-            continue
-
-        node_data = {}
-        for item in line.split():
-            if "=" in item:
-                key, value = item.split("=", 1)
-                node_data[key] = value
-
-        gres = node_data.get("Gres", "")
-        gpu_count = extract_gpus_from_gres(gres)
-        max_gpus = max(max_gpus, gpu_count)
+    stdout = result.stdout.strip().split("\n")[0]
 
     return {
-        "max_gpus": max_gpus,
+        "max_gpus": extract_gpus_from_gres(stdout),
     }
 
 
@@ -71,19 +60,19 @@ def get_partition_info() -> list[PartitionInfo]:
                 key, value = item.split("=", 1)
                 partition_data[key] = value
 
-        name = partition_data.get("PartitionName", "Unknown")
+        partition_name = partition_data.get("PartitionName", "Unknown")
 
         nodes = partition_data.get("Nodes", "")
         if nodes and nodes != "(null)":
-            node_info = get_node_resources(nodes)
+            partition_info = get_partition_resources(partition=partition_name)
         else:
-            node_info = {
+            partition_info = {
                 "max_gpus": 0,
             }
 
         partition = PartitionInfo(
-            name=name,
-            max_gpus_per_node=node_info["max_gpus"],
+            name=partition_name,
+            max_gpus_per_node=partition_info["max_gpus"],
         )
         partitions.append(partition)
 
