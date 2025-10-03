@@ -27,10 +27,6 @@ class ResourceShape(NamedTuple):
     tasks_per_node: int
     gpus_per_node: int
     slurm_partition: str
-    slurm_cmd: Optional[str] = None
-    account: Optional[str] = None
-    qos: Optional[str] = None
-    time: Optional[str] = None
 
     def to_json(self) -> str:
         """Convert ResourceShape to JSON format.
@@ -59,12 +55,6 @@ class ResourceShape(NamedTuple):
         ]
         if self.gpus_per_node > 0:
             lines.append(f"#SBATCH --gres=gpu:{self.gpus_per_node}")
-        for attr_name in ["account", "qos", "time"]:
-            value = getattr(self, attr_name)
-            if value is not None:
-                lines.append(f"#SBATCH --{attr_name}={value}")
-        if self.slurm_cmd is not None:
-            lines.append(self.slurm_cmd)
         return "\n".join(lines)
 
     def to_srun(self) -> str:
@@ -78,17 +68,27 @@ class ResourceShape(NamedTuple):
             f"--cpus-per-task={self.cpu_cores}",
             f"--mem={self.memory}",
             f"--ntasks-per-node={self.tasks_per_node}",
-            f"--gres=gpu:{self.gpus_per_node}",
             f"--partition={self.slurm_partition}",
         ]
         if self.gpus_per_node > 0:
             cmd_parts.append(f"--gres=gpu:{self.gpus_per_node}")
-        for attr_name in ["account", "qos", "time"]:
-            value = getattr(self, attr_name)
-            if value is not None:
-                cmd_parts.append(f"--{attr_name}={value}")
-        if self.slurm_cmd is not None:
-            cmd_parts.append(self.slurm_cmd)
+        return " ".join(cmd_parts)
+
+    def to_salloc(self) -> str:
+        """Convert ResourceShape to salloc command format.
+
+        Returns:
+            str: salloc command with resource specifications
+        """
+        cmd_parts = [
+            "salloc",
+            f"--cpus-per-task={self.cpu_cores}",
+            f"--mem={self.memory}",
+            f"--ntasks-per-node={self.tasks_per_node}",
+            f"--partition={self.slurm_partition}",
+        ]
+        if self.gpus_per_node > 0:
+            cmd_parts.append(f"--gres=gpu:{self.gpus_per_node}")
         return " ".join(cmd_parts)
 
     def to_submitit(self) -> str:
@@ -106,9 +106,6 @@ class ResourceShape(NamedTuple):
         attrs = [
             "slurm_partition",
             "tasks_per_node",
-            "account",
-            "qos",
-            "time",
         ]
         if self.gpus_per_node > 0:
             attrs.append("gpus_per_node")
@@ -260,7 +257,6 @@ class UnifiedInfo:
         gpus_per_node: int,
         num_tasks_per_node: int = 1,
         cpus_per_node: int = 0,
-        **kwargs,
     ) -> ResourceShape:
         """Calculate resource requirements for better GPU packing based on node's GPU configuration.
 
@@ -321,7 +317,6 @@ class UnifiedInfo:
             memory=memory,
             tasks_per_node=num_tasks_per_node,
             gpus_per_node=gpus_per_node,
-            **kwargs,
         )
 
     def get_array_job_requirements(

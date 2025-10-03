@@ -89,6 +89,9 @@ wheels = [
 [[package]]
 name = "clusterscope"
 source = { editable = "." }
+dependencies = [
+    { name = "click" },
+]
 
 [package.optional-dependencies]
 dev = [
@@ -97,6 +100,7 @@ dev = [
     { name = "flake8" },
     { name = "mypy" },
     { name = "pre-commit" },
+    { name = "types-click" },
     { name = "ufmt" },
     { name = "usort" },
 ]
@@ -105,9 +109,11 @@ dev = [
 requires-dist = [
     { name = "black", marker = "extra == 'dev'" },
     { name = "build", marker = "extra == 'dev'" },
+    { name = "click", specifier = ">=8.0.0,!=8.3.0" },
     { name = "flake8", marker = "extra == 'dev'" },
     { name = "mypy", marker = "extra == 'dev'" },
     { name = "pre-commit", marker = "extra == 'dev'" },
+    { name = "types-click", marker = "extra == 'dev'" },
     { name = "ufmt", marker = "extra == 'dev'" },
     { name = "usort", marker = "extra == 'dev'" },
 ]
@@ -168,7 +174,7 @@ name = "importlib-metadata"
 version = "8.7.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "zipp" },
+    { name = "zipp", marker = "python_full_version < '3.13'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/76/66/650a33bd90f786193e4de4b3ad86ea60b53c89b669a5c7be931fac31cdb0/importlib_metadata-8.7.0.tar.gz", hash = "sha256:d13b81ad223b890aa16c5471f2ac3056cf76c5f10f82d6f9292f0b415f389000", size = 56641, upload-time = "2025-04-27T15:29:01.736Z" }
 wheels = [
@@ -529,6 +535,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/4d/93/630e10bacd897daeb9ff5a408f4e7cb0fc2f243e7e3ef00f9e6cf319b11c/trailrunner-1.4.0.tar.gz", hash = "sha256:3fe61e259e6b2e5192f321c265985b7a0dc18497ced62b2da244f08104978398", size = 15836, upload-time = "2023-03-27T07:54:35.515Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b1/29/21001afea86bac5016c3940b43de3ce4786b0d8337d4ea79bb903c649ce3/trailrunner-1.4.0-py3-none-any.whl", hash = "sha256:a286d39f2723f28d167347f41cf8f232832648709366e722f55cf5545772a48e", size = 11071, upload-time = "2023-03-27T07:54:32.514Z" },
+]
+
+[[package]]
+name = "types-click"
+version = "7.1.8"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/00/ff/0e6a56108d45c80c61cdd4743312d0304d8192482aea4cce96c554aaa90d/types-click-7.1.8.tar.gz", hash = "sha256:b6604968be6401dc516311ca50708a0a28baa7a0cb840efd7412f0dbbff4e092", size = 10015, upload-time = "2021-11-23T12:28:01.701Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ee/ad/607454a5f991c5b3e14693a7113926758f889138371058a5f72f567fa131/types_click-7.1.8-py3-none-any.whl", hash = "sha256:8cb030a669e2e927461be9827375f83c16b8178c365852c060a34e24871e7e81", size = 12929, upload-time = "2021-11-23T12:27:59.493Z" },
 ]
 
 [[package]]

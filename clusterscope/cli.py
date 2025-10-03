@@ -204,39 +204,16 @@ def task():
 @click.option(
     "--format",
     "output_format",
-    type=click.Choice(["json", "sbatch", "srun", "submitit"]),
+    type=click.Choice(["json", "sbatch", "srun", "submitit", "salloc"]),
     default="json",
     help="Format to output the job requirements in",
 )
-@click.option(
-    "--account",
-    type=str,
-    default=None,
-    help="SLURM account to charge resources to (optional)",
-)
-@click.option(
-    "--qos",
-    type=str,
-    default=None,
-    help="Quality of Service (QoS) specification for the job (optional)",
-)
-@click.option(
-    "--time",
-    type=str,
-    default=None,
-    help="Time limit for the job (format: HH:MM:SS or days-HH:MM:SS, optional)",
-)
-@click.option("--slurm-cmd", default=None, help="Command to run on Slurm")
 def slurm(
     gpus_per_node: int,
     cpus_per_node: int,
     num_tasks_per_node: int,
     output_format: str,
     partition: str,
-    account: str,
-    qos: str,
-    time: str,
-    slurm_cmd: str,
 ):
     """Generate job requirements for a task of a Slurm job based on GPU or CPU per node requirements."""
     if gpus_per_node is None and cpus_per_node is None:
@@ -279,10 +256,6 @@ def slurm(
         cpus_per_node=cpus_per_node,
         gpus_per_node=gpus_per_node,
         num_tasks_per_node=num_tasks_per_node,
-        account=account,
-        qos=qos,
-        time=time,
-        slurm_cmd=slurm_cmd,
     )
 
     # Route to the correct format method based on CLI option
@@ -291,6 +264,7 @@ def slurm(
         "sbatch": job_requirements.to_sbatch,
         "srun": job_requirements.to_srun,
         "submitit": job_requirements.to_submitit,
+        "salloc": job_requirements.to_salloc,
     }
     click.echo(format_methods[output_format]())
 
@@ -302,7 +276,7 @@ def slurm(
 @click.option(
     "--format",
     "output_format",
-    type=click.Choice(["json", "sbatch", "srun", "submitit"]),
+    type=click.Choice(["json", "sbatch", "srun", "submitit", "salloc"]),
     default="json",
     help="Format to output the job requirements in",
 )
@@ -325,6 +299,7 @@ def array(num_gpus_per_task: int, output_format: str, partition: str):
         "json": job_requirements.to_json,
         "sbatch": job_requirements.to_sbatch,
         "srun": job_requirements.to_srun,
+        "salloc": job_requirements.to_salloc,
         "submitit": job_requirements.to_submitit,
     }
     click.echo(format_methods[output_format]())

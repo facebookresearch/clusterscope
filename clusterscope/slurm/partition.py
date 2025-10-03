@@ -4,11 +4,10 @@
 
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
-import subprocess
 from dataclasses import dataclass
 
 from clusterscope.shell import run_cli
-from clusterscope.slurm.parser import extract_gpus_from_gres
+from clusterscope.slurm.parser import parse_gres
 
 
 @dataclass
@@ -16,44 +15,27 @@ class PartitionInfo:
     """Store partition information from scontrol."""
 
     name: str
-    max_cpus_per_node: int
     max_gpus_per_node: int
+    max_cpus_per_node: int
 
 
-def get_node_resources(node_spec: str) -> dict:
-    """
-    Query node resources for given node specification.
-    Returns dict with max resources across nodes in the spec.
-    """
-    # not checking the return code here because `scontrol show node` can return non-zero exit code even
-    # though stdout has what we need.
-    result = subprocess.run(
-        ["scontrol", "show", "node", node_spec, "-o"], capture_output=True, text=True
+def get_partition_resources(partition: str) -> dict:
+    result = run_cli(
+        [
+            "sinfo",
+            "-o",
+            "%G,%c",
+            f"--partition={partition}",
+            "--noheader",
+        ],
     )
 
-    max_gpus = 0
-    max_cpus = 0
-
-    for line in result.stdout.strip().split("\n"):
-        if not line:
-            continue
-
-        node_data = {}
-        for item in line.split():
-            if "=" in item:
-                key, value = item.split("=", 1)
-                node_data[key] = value
-
-        cpus = int(node_data.get("CPUTot", 0))
-        max_cpus = max(max_cpus, cpus)
-
-        gres = node_data.get("Gres", "")
-        gpu_count = extract_gpus_from_gres(gres)
-        max_gpus = max(max_gpus, gpu_count)
+    stdout = result.strip().split("\n")[0]
+    gres, cpus = stdout.split(",")
 
     return {
-        "max_cpus": max_cpus,
-        "max_gpus": max_gpus,
+        "max_gpus": parse_gres(gres),
+        "max_cpus": cpus,
     }
 
 
@@ -77,21 +59,21 @@ def get_partition_info() -> list[PartitionInfo]:
                 key, value = item.split("=", 1)
                 partition_data[key] = value
 
-        name = partition_data.get("PartitionName", "Unknown")
+        partition_name = partition_data.get("PartitionName", "Unknown")
 
         nodes = partition_data.get("Nodes", "")
         if nodes and nodes != "(null)":
-            node_info = get_node_resources(nodes)
+            partition_info = get_partition_resources(partition=partition_name)
         else:
-            node_info = {
-                "max_cpus": 0,
+            partition_info = {
                 "max_gpus": 0,
+                "max_cpus": 0,
             }
 
         partition = PartitionInfo(
-            name=name,
-            max_cpus_per_node=node_info["max_cpus"],
-            max_gpus_per_node=node_info["max_gpus"],
+            name=partition_name,
+            max_cpus_per_node=partition_info["max_cpus"],
+            max_gpus_per_node=partition_info["max_gpus"],
         )
         partitions.append(partition)
 
