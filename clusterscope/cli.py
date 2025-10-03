@@ -5,14 +5,12 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 import json
-import logging
-import sys
 from typing import Any, Dict
 
 import click
 
 from clusterscope.cluster_info import AWSClusterInfo, UnifiedInfo
-from clusterscope.slurm.partition import get_partition_info
+from clusterscope.validate import job_gen_task_slurm_validator
 
 
 def format_dict(data: Dict[str, Any]) -> str:
@@ -184,12 +182,14 @@ def task():
 @task.command()
 @click.option(
     "--gpus-per-task",
+    "gpus_per_task",
     default=0,
     type=click.IntRange(min=0),
     help="Number of GPUs per task to request",
 )
 @click.option(
     "--cpus-per-task",
+    "cpus_per_task",
     default=0,
     type=click.IntRange(min=0),
     help="Number of CPUs per task to request",
@@ -216,40 +216,12 @@ def slurm(
     partition: str,
 ):
     """Generate job requirements for a task of a Slurm job based on GPU or CPU per task requirements."""
-    if gpus_per_task is None and cpus_per_task is None:
-        logging.error("Either --gpus-per-task or --cpus-per-task must be specified.")
-        sys.exit(1)
-    if gpus_per_task == 0 and cpus_per_task == 0:
-        logging.error("One of --gpus-per-task or --cpus-per-task has to be non-zero.")
-        sys.exit(1)
-    if gpus_per_task and cpus_per_task:
-        logging.error(
-            "Only one of --gpus-per-task or --cpus-per-task can be specified. For GPU requests, use --gpus-per-task and cpus-per-task will be generated automatically. For CPU requests, use --cpus-per-task only."
-        )
-        sys.exit(1)
-
-    partitions = get_partition_info()
-    req_partition = next((p for p in partitions if p.name == partition), None)
-
-    if req_partition is None:
-        logging.error(
-            f"Partition {partition} not found. Available partitions: {[p.name for p in partitions]}"
-        )
-        sys.exit(1)
-
-    # reject if requires more GPUs than the max GPUs per node for the partition
-    if gpus_per_task * tasks_per_node > req_partition.max_gpus_per_node:
-        logging.error(
-            f"Requested {gpus_per_task=} GPUs with {tasks_per_node=} exceeds the maximum {req_partition.max_gpus_per_node} GPUs per node available in partition '{partition}'"
-        )
-        sys.exit(1)
-
-    # reject if requires more CPUs than the max CPUs at the partition
-    if cpus_per_task * tasks_per_node > req_partition.max_cpus_per_node:
-        logging.error(
-            f"Requested {cpus_per_task=} CPUs with {tasks_per_node=} exceeds the maximum {req_partition.max_cpus_per_node} CPUs per node available in partition '{partition}'"
-        )
-        sys.exit(1)
+    job_gen_task_slurm_validator(
+        partition=partition,
+        gpus_per_task=gpus_per_task,
+        cpus_per_task=cpus_per_task,
+        tasks_per_node=tasks_per_node,
+    )
 
     unified_info = UnifiedInfo(partition=partition)
     job_requirements = unified_info.get_task_resource_requirements(
