@@ -215,7 +215,7 @@ def slurm(
     output_format: str,
     partition: str,
 ):
-    """Generate job requirements for a task of a Slurm job based on GPU or CPU per node requirements."""
+    """Generate job requirements for a task of a Slurm job based on GPU or CPU per task requirements."""
     if gpus_per_task is None and cpus_per_task is None:
         logging.error("Either --gpus-per-task or --cpus-per-task must be specified.")
         sys.exit(1)
@@ -223,9 +223,10 @@ def slurm(
         logging.error("One of --gpus-per-task or --cpus-per-task has to be non-zero.")
         sys.exit(1)
     if gpus_per_task and cpus_per_task:
-        logging.warning(
-            "Both --gpus-per-task and --cpus-per-task were specified. Assuming this is a GPU request and will generate appropriate CPU allocation per node based on GPU requirements."
+        logging.error(
+            "Only one of --gpus-per-task or --cpus-per-task can be specified. For GPU requests, use --gpus-per-task and cpus-per-task will be generated automatically. For CPU requests, use --cpus-per-task only."
         )
+        sys.exit(1)
 
     partitions = get_partition_info()
     req_partition = next((p for p in partitions if p.name == partition), None)
