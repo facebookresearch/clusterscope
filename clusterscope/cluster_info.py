@@ -28,17 +28,20 @@ class ResourceShape(NamedTuple):
     tasks_per_node: int
     slurm_partition: str
 
+    def to_dict(self) -> dict:
+        data = {k: v for k, v in self._asdict().items() if v is not None}
+        data["mem_gb"] = parse_memory_to_gb(data["memory"])
+        if self.gpus_per_task == 0:
+            data.pop("gpus_per_task")
+        return data
+
     def to_json(self) -> str:
         """Convert ResourceShape to JSON format.
 
         Returns:
             str: JSON representation of the resource requirements
         """
-        data = {k: v for k, v in self._asdict().items() if v is not None}
-        data["mem_gb"] = parse_memory_to_gb(data["memory"])
-        if self.gpus_per_task == 0:
-            data.pop("gpus_per_task")
-        return json.dumps(data, indent=2)
+        return json.dumps(self.to_dict(), indent=2)
 
     def to_sbatch(self) -> str:
         """Convert ResourceShape to SBATCH script format.

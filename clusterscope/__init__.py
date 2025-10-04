@@ -10,6 +10,7 @@ from clusterscope.lib import (
     cpus,
     get_job,
     get_tmp_dir,
+    job_gen_task_slurm,
     local_node_gpu_generation_and_count,
     mem,
     slurm_version,
@@ -22,5 +23,6 @@ __all__ = [
     "mem",
     "local_node_gpu_generation_and_count",
     "get_job",
+    "job_gen_task_slurm",
     "get_tmp_dir",
 ]

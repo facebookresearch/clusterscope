@@ -7,6 +7,7 @@ from typing import Dict, Literal, Optional, Tuple
 
 from clusterscope.cluster_info import LocalNodeInfo, UnifiedInfo
 from clusterscope.job_info import JobInfo
+from clusterscope.validate import job_gen_task_slurm_validator
 
 # Partition-aware unified info instance
 _unified_info: Optional[UnifiedInfo] = None
@@ -95,3 +96,27 @@ def get_tmp_dir():
 def local_node_gpu_generation_and_count() -> Dict[str, int]:
     """Get the GPU generation and count for the local node."""
     return local_info.get_gpu_generation_and_count()
+
+
+def job_gen_task_slurm(
+    partition: str,
+    gpus_per_task: int = 0,
+    cpus_per_task: int = 0,
+    tasks_per_node: int = 1,
+) -> dict:
+    """Get the number of CPUs/RAM for each task in the job."""
+    job_gen_task_slurm_validator(
+        partition=partition,
+        gpus_per_task=gpus_per_task,
+        cpus_per_task=cpus_per_task,
+        tasks_per_node=tasks_per_node,
+    )
+
+    unified_info = UnifiedInfo(partition=partition)
+    job_requirements = unified_info.get_task_resource_requirements(
+        partition=partition,
+        cpus_per_task=cpus_per_task,
+        gpus_per_task=gpus_per_task,
+        tasks_per_node=tasks_per_node,
+    )
+    return job_requirements.to_dict()
