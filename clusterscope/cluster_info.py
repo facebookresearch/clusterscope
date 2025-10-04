@@ -310,7 +310,7 @@ class UnifiedInfo:
             )
 
             ram_mb_per_gpu = total_ram_per_node / total_gpus_per_node
-            total_required_ram_mb_per_task = math.ceil(
+            total_required_ram_mb = math.ceil(
                 ram_mb_per_gpu * gpus_per_task * tasks_per_node
             )
 
@@ -321,7 +321,7 @@ class UnifiedInfo:
 
         # Memory per node: Convert MB to GB and format for Slurm
         # Note: Memory is allocated per node, not per task in most Slurm configurations
-        required_ram_gb = total_required_ram_mb_per_task // 1024
+        required_ram_gb = total_required_ram_mb // 1024
         # Default to GB for higher precision
         memory = f"{required_ram_gb:.0f}G"
 

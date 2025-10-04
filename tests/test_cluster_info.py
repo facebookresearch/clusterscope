@@ -788,6 +788,62 @@ class TestResourceRequirementMethods(unittest.TestCase):
         self.assertEqual(result.cpus_per_task, 64)  # All CPUs
         self.assertEqual(result.memory, "512G")  # All memory
 
+        """Test get_task_resource_requirements with all 8 GPUs (full node)."""
+        mock_total_gpus.return_value = 8
+        mock_cpus.return_value = 192
+        mock_mem.return_value = 1843200
+
+        result = self.unified_info.get_task_resource_requirements(
+            partition="test_partition", gpus_per_task=8
+        )
+
+        self.assertEqual(result.cpus_per_task, 192)  # All CPUs
+        self.assertEqual(result.memory, "1800G")  # All memory: 1843200/1024 = 1800GB
+        self.assertEqual(result.tasks_per_node, 1)
+
+    @patch.object(UnifiedInfo, "get_cpus_per_node")
+    @patch.object(UnifiedInfo, "get_mem_per_node_MB")
+    def test_get_task_resource_requirements_full_cpu_node_configuration(
+        self, mock_mem, mock_cpus
+    ):
+        """Test get_task_resource_requirements on a 4-GPU node configuration."""
+        mock_cpus.return_value = 192
+        mock_mem.return_value = 524288  # 512GB in MB
+
+        # Test 1 GPU on 4-GPU node
+        result = self.unified_info.get_task_resource_requirements(
+            partition="test_partition",
+            cpus_per_task=192,
+            tasks_per_node=1,
+        )
+        self.assertEqual(result.cpus_per_task, 192)
+        self.assertEqual(result.memory, "512G")
+
+    @patch.object(UnifiedInfo, "get_cpus_per_node")
+    @patch.object(UnifiedInfo, "get_mem_per_node_MB")
+    def test_get_task_resource_requirements_96cpu_node_configuration(
+        self, mock_mem, mock_cpus
+    ):
+        """Test get_task_resource_requirements on a 4-GPU node configuration."""
+        mock_cpus.return_value = 192
+        mock_mem.return_value = 524288  # 512GB in MB
+
+        # Test 1 GPU on 4-GPU node
+        result = self.unified_info.get_task_resource_requirements(
+            partition="test_partition",
+            cpus_per_task=96,
+            tasks_per_node=1,
+        )
+        self.assertEqual(result.cpus_per_task, 96)
+        self.assertEqual(result.memory, "256G")
+
+        # Test full 4-GPU node
+        result = self.unified_info.get_task_resource_requirements(
+            partition="test_partition", gpus_per_task=4
+        )
+        self.assertEqual(result.cpus_per_task, 64)  # All CPUs
+        self.assertEqual(result.memory, "512G")  # All memory
+
     @patch.object(UnifiedInfo, "get_total_gpus_per_node")
     @patch.object(UnifiedInfo, "get_cpus_per_node")
     @patch.object(UnifiedInfo, "get_mem_per_node_MB")
