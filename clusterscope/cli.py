@@ -270,42 +270,6 @@ def slurm(
     click.echo(format_methods[output_format]())
 
 
-@job_gen.command()
-@click.option(
-    "--gpus-per-task", type=int, required=True, help="Number of GPUs per task"
-)
-@click.option(
-    "--format",
-    "output_format",
-    type=click.Choice(["json", "sbatch", "srun", "submitit", "salloc"]),
-    default="json",
-    help="Format to output the job requirements in",
-)
-@click.option(
-    "--partition",
-    type=str,
-    default=None,
-    help="Slurm partition name to filter queries (optional)",
-)
-def array(gpus_per_task: int, output_format: str, partition: str):
-    """Generate job requirements for an array job."""
-    unified_info = UnifiedInfo(partition=partition)
-    job_requirements = unified_info.get_array_job_requirements(
-        partition=partition,
-        gpus_per_task=gpus_per_task,
-    )
-
-    # Route to the correct format method based on CLI option
-    format_methods = {
-        "json": job_requirements.to_json,
-        "sbatch": job_requirements.to_sbatch,
-        "srun": job_requirements.to_srun,
-        "salloc": job_requirements.to_salloc,
-        "submitit": job_requirements.to_submitit,
-    }
-    click.echo(format_methods[output_format]())
-
-
 def main():
     """Main entry point for the Slurm information CLI."""
     cli()
