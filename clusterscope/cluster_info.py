@@ -297,7 +297,7 @@ class UnifiedInfo:
         if gpus_per_task == 0:
 
             ram_mb_per_cpu = total_ram_per_node / total_cpus_per_node
-            total_required_ram_mb = math.ceil(
+            total_required_ram_mb = math.floor(
                 ram_mb_per_cpu * cpus_per_task * tasks_per_node
             )
         # GPU Request
@@ -305,19 +305,18 @@ class UnifiedInfo:
             total_gpus_per_node = self.get_total_gpus_per_node()
 
             cpu_cores_per_gpu = total_cpus_per_node / total_gpus_per_node
-            total_required_cpu_cores_per_task = math.ceil(
+            total_required_cpu_cores_per_task = math.floor(
                 cpu_cores_per_gpu * gpus_per_task
             )
 
             ram_mb_per_gpu = total_ram_per_node / total_gpus_per_node
-            total_required_ram_mb = math.ceil(
+            total_required_ram_mb = math.floor(
                 ram_mb_per_gpu * gpus_per_task * tasks_per_node
             )
 
             cpu_cores_per_task = total_required_cpu_cores_per_task / tasks_per_node
 
-            # CPU cores per task: Round up to ensure we don't under-allocate
-            cpus_per_task = math.ceil(cpu_cores_per_task)
+            cpus_per_task = math.floor(cpu_cores_per_task)
 
         # Memory per node: Convert MB to GB and format for Slurm
         # Note: Memory is allocated per node, not per task in most Slurm configurations
@@ -366,34 +365,24 @@ class UnifiedInfo:
 
         if gpus_per_task == max_gpus_per_node:
             # For max GPUs, use all available resources
-            required_cpu_cores = total_cpu_cores
-            required_ram_mb = total_ram_mb
+            required_cpu_cores = math.floor(total_cpu_cores)
+            required_ram_mb = math.floor(total_ram_mb)
         else:
             # Calculate per-GPU allocation based on actual GPU count per node
             cpu_cores_per_gpu = total_cpu_cores / max_gpus_per_node
             ram_mb_per_gpu = total_ram_mb / max_gpus_per_node
 
             # Calculate requirements per array element
-            required_cpu_cores = math.ceil(cpu_cores_per_gpu * gpus_per_task)
-            required_ram_mb = math.ceil(ram_mb_per_gpu * gpus_per_task)
-
-        # Convert to Slurm SBATCH format
-        # CPU cores: Round up to ensure we don't under-allocate
-        sbatch_cpu_cores = math.ceil(required_cpu_cores)
+            required_cpu_cores = math.floor(cpu_cores_per_gpu * gpus_per_task)
+            required_ram_mb = math.floor(ram_mb_per_gpu * gpus_per_task)
 
         # Memory: Convert MB to GB and format for Slurm
         required_ram_gb = required_ram_mb / 1024
-        if required_ram_gb >= 1024:
-            # Use TB format for very large memory
-            sbatch_memory = f"{required_ram_gb / 1024:.0f}T"
-        else:
-            # Use GB format (most common)
-            sbatch_memory = f"{required_ram_gb:.0f}G"
+        sbatch_memory = f"{required_ram_gb:.0f}G"
 
-        # Array jobs always have 1 task per array element
         return ResourceShape(
             slurm_partition=partition,
-            cpus_per_task=sbatch_cpu_cores,
+            cpus_per_task=required_cpu_cores,
             memory=sbatch_memory,
             tasks_per_node=1,
             gpus_per_task=gpus_per_task,
