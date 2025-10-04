@@ -208,7 +208,7 @@ def task():
     type=click.IntRange(min=1),
     help="Number of GPUs per task to request",
 )
-@optgroup.option(
+@optgroup.option(  # type: ignore[arg-type]
     "--cpus-per-task",
     default=None,
     type=click.IntRange(min=1),
