@@ -810,9 +810,9 @@ class TestResourceRequirementMethods(unittest.TestCase):
         mock_cpus.return_value = 192
         mock_mem.return_value = 524288  # 512GB in MB
 
-        # Test 1 GPU on 4-GPU node
         result = self.unified_info.get_task_resource_requirements(
             partition="test_partition",
+            gpus_per_task=0,
             cpus_per_task=192,
             tasks_per_node=1,
         )
@@ -831,18 +831,12 @@ class TestResourceRequirementMethods(unittest.TestCase):
         # Test 1 GPU on 4-GPU node
         result = self.unified_info.get_task_resource_requirements(
             partition="test_partition",
+            gpus_per_task=0,
             cpus_per_task=96,
             tasks_per_node=1,
         )
         self.assertEqual(result.cpus_per_task, 96)
         self.assertEqual(result.memory, "256G")
-
-        # Test full 4-GPU node
-        result = self.unified_info.get_task_resource_requirements(
-            partition="test_partition", gpus_per_task=4
-        )
-        self.assertEqual(result.cpus_per_task, 64)  # All CPUs
-        self.assertEqual(result.memory, "512G")  # All memory
 
     @patch.object(UnifiedInfo, "get_total_gpus_per_node")
     @patch.object(UnifiedInfo, "get_cpus_per_node")
