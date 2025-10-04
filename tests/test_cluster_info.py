@@ -806,7 +806,7 @@ class TestResourceRequirementMethods(unittest.TestCase):
     def test_get_task_resource_requirements_full_cpu_node_configuration(
         self, mock_mem, mock_cpus
     ):
-        """Test get_task_resource_requirements on a 4-GPU node configuration."""
+        """Test get_task_resource_requirements on a 192-CPU node configuration."""
         mock_cpus.return_value = 192
         mock_mem.return_value = 524288  # 512GB in MB
 
@@ -824,11 +824,10 @@ class TestResourceRequirementMethods(unittest.TestCase):
     def test_get_task_resource_requirements_96cpu_node_configuration(
         self, mock_mem, mock_cpus
     ):
-        """Test get_task_resource_requirements on a 4-GPU node configuration."""
+        """Test get_task_resource_requirements on a 192-CPU node configuration."""
         mock_cpus.return_value = 192
         mock_mem.return_value = 524288  # 512GB in MB
 
-        # Test 1 GPU on 4-GPU node
         result = self.unified_info.get_task_resource_requirements(
             partition="test_partition",
             gpus_per_task=0,
