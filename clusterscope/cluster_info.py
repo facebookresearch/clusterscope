@@ -23,10 +23,10 @@ class ResourceShape(NamedTuple):
     """Represents resource requirements for a job in Slurm SBATCH format."""
 
     cpus_per_task: int
-    gpus_per_task: int
     memory: str
     tasks_per_node: int
     slurm_partition: str
+    gpus_per_task: Optional[int] = None
 
     def to_json(self) -> str:
         """Convert ResourceShape to JSON format.
@@ -53,7 +53,7 @@ class ResourceShape(NamedTuple):
             f"#SBATCH --ntasks-per-node={self.tasks_per_node}",
             f"#SBATCH --partition={self.slurm_partition}",
         ]
-        if self.gpus_per_task > 0:
+        if self.gpus_per_task and self.gpus_per_task > 0:
             lines.append(f"#SBATCH --gpus-per-task={self.gpus_per_task}")
         return "\n".join(lines)
 
@@ -70,7 +70,7 @@ class ResourceShape(NamedTuple):
             f"--ntasks-per-node={self.tasks_per_node}",
             f"--partition={self.slurm_partition}",
         ]
-        if self.gpus_per_task > 0:
+        if self.gpus_per_task and self.gpus_per_task > 0:
             cmd_parts.append(f"--gpus-per-task={self.gpus_per_task}")
         return " ".join(cmd_parts)
 
@@ -87,7 +87,7 @@ class ResourceShape(NamedTuple):
             f"--ntasks-per-node={self.tasks_per_node}",
             f"--partition={self.slurm_partition}",
         ]
-        if self.gpus_per_task > 0:
+        if self.gpus_per_task and self.gpus_per_task > 0:
             cmd_parts.append(f"--gpus-per-task={self.gpus_per_task}")
         return " ".join(cmd_parts)
 
@@ -107,7 +107,7 @@ class ResourceShape(NamedTuple):
             "slurm_partition",
             "tasks_per_node",
         ]
-        if self.gpus_per_task > 0:
+        if self.gpus_per_task and self.gpus_per_task > 0:
             attrs.append("gpus_per_task")
         for attr_name in attrs:
             value = getattr(self, attr_name)
@@ -264,9 +264,9 @@ class UnifiedInfo:
     def get_task_resource_requirements(
         self,
         partition: str,
-        gpus_per_task: int,
+        cpus_per_task: Optional[int] = None,
+        gpus_per_task: Optional[int] = None,
         tasks_per_node: int = 1,
-        cpus_per_task: int = 0,
     ) -> ResourceShape:
         """Calculate resource requirements for better GPU packing based on node's GPU configuration.
 
@@ -278,15 +278,18 @@ class UnifiedInfo:
         per-array-element resource allocation.
 
         Args:
-            gpus_per_task (int): Total number of GPUs required per task (1 to max available)
-            cpus_per_task (int): Total number of CPUs required per task (1 to max available)
+            (mutually exclusive, at least 1 required):
+                cpus_per_task (int): Total number of CPUs required per task (1 to max available)
+                gpus_per_task (int): Total number of GPUs required per task (1 to max available)
             tasks_per_node (int): Number of tasks to run per node (default: 1)
 
         Returns:
             ResourceShape: Tuple containing CPU cores per task (int), memory per node (str),
                           and tasks per node (int)
         """
-        assert not (gpus_per_task is None and cpus_per_task is None)
+        assert not (
+            gpus_per_task is None and cpus_per_task is None
+        ), "gpus_per_task, and cpus_per_task are mutually exclusive, at least 1 required"
         if tasks_per_node < 1:
             raise ValueError("tasks_per_node must be at least 1")
 
@@ -294,14 +297,13 @@ class UnifiedInfo:
         total_ram_per_node = self.get_mem_per_node_MB()
 
         # CPU Request
-        if gpus_per_task == 0:
-
+        if cpus_per_task is not None:
             ram_mb_per_cpu = total_ram_per_node / total_cpus_per_node
             total_required_ram_mb = math.ceil(
                 ram_mb_per_cpu * cpus_per_task * tasks_per_node
             )
         # GPU Request
-        else:
+        elif gpus_per_task is not None:
             total_gpus_per_node = self.get_total_gpus_per_node()
 
             cpu_cores_per_gpu = total_cpus_per_node / total_gpus_per_node
@@ -318,6 +320,10 @@ class UnifiedInfo:
 
             # CPU cores per task: Round up to ensure we don't under-allocate
             cpus_per_task = math.ceil(cpu_cores_per_task)
+        else:
+            raise ValueError(
+                "gpus_per_task, and cpus_per_task are mutually exclusive, at least 1 required."
+            )
 
         # Memory per node: Convert MB to GB and format for Slurm
         # Note: Memory is allocated per node, not per task in most Slurm configurations

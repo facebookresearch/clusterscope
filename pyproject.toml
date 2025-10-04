@@ -21,6 +21,7 @@ authors = [
 ]
 dependencies = [
     "click>=8.0.0, !=8.3.0",
+    "click-option-group",
 ]
 
 [project.scripts]

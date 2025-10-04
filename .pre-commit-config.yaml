@@ -29,3 +29,4 @@ repos:
       args: ["--install-types", "--non-interactive"]
       additional_dependencies:
         - types-click
+        - click-option-group
