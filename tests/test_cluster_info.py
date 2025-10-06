@@ -888,8 +888,8 @@ class TestResourceRequirementMethods(unittest.TestCase):
             partition="test_partition", gpus_per_task=1
         )
 
-        # 191/8 = 23.875, should round up to 24
-        self.assertEqual(result.cpus_per_task, 24)
+        # 191/8 = 23.875, should round down to 23
+        self.assertEqual(result.cpus_per_task, 23)
 
     @patch.object(UnifiedInfo, "get_total_gpus_per_node")
     def test_getResRequirements_invalid_tasks_per_node(self, mock_total_gpus):

@@ -28,17 +28,20 @@ class ResourceShape(NamedTuple):
     tasks_per_node: int
     slurm_partition: str
 
+    def to_dict(self) -> dict:
+        data = {k: v for k, v in self._asdict().items() if v is not None}
+        data["mem_gb"] = parse_memory_to_gb(data["memory"])
+        if self.gpus_per_task == 0:
+            data.pop("gpus_per_task")
+        return data
+
     def to_json(self) -> str:
         """Convert ResourceShape to JSON format.
 
         Returns:
             str: JSON representation of the resource requirements
         """
-        data = {k: v for k, v in self._asdict().items() if v is not None}
-        data["mem_gb"] = parse_memory_to_gb(data["memory"])
-        if self.gpus_per_task == 0:
-            data.pop("gpus_per_task")
-        return json.dumps(data, indent=2)
+        return json.dumps(self.to_dict(), indent=2)
 
     def to_sbatch(self) -> str:
         """Convert ResourceShape to SBATCH script format.
@@ -297,7 +300,7 @@ class UnifiedInfo:
         if gpus_per_task == 0:
 
             ram_mb_per_cpu = total_ram_per_node / total_cpus_per_node
-            total_required_ram_mb = math.ceil(
+            total_required_ram_mb = math.floor(
                 ram_mb_per_cpu * cpus_per_task * tasks_per_node
             )
         # GPU Request
@@ -305,19 +308,18 @@ class UnifiedInfo:
             total_gpus_per_node = self.get_total_gpus_per_node()
 
             cpu_cores_per_gpu = total_cpus_per_node / total_gpus_per_node
-            total_required_cpu_cores_per_task = math.ceil(
+            total_required_cpu_cores_per_task = math.floor(
                 cpu_cores_per_gpu * gpus_per_task
             )
 
             ram_mb_per_gpu = total_ram_per_node / total_gpus_per_node
-            total_required_ram_mb = math.ceil(
+            total_required_ram_mb = math.floor(
                 ram_mb_per_gpu * gpus_per_task * tasks_per_node
             )
 
             cpu_cores_per_task = total_required_cpu_cores_per_task / tasks_per_node
 
-            # CPU cores per task: Round up to ensure we don't under-allocate
-            cpus_per_task = math.ceil(cpu_cores_per_task)
+            cpus_per_task = math.floor(cpu_cores_per_task)
 
         # Memory per node: Convert MB to GB and format for Slurm
         # Note: Memory is allocated per node, not per task in most Slurm configurations
