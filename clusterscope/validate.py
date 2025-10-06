@@ -1,17 +1,19 @@
 import logging
 import sys
+from typing import Optional
 
 from clusterscope.slurm.partition import get_partition_info
 
 
 def job_gen_task_slurm_validator(
     partition: str,
-    gpus_per_task: int,
-    cpus_per_task: int,
+    gpus_per_task: Optional[int],
+    cpus_per_task: Optional[int],
     tasks_per_node: int,
     exit_on_error: bool = False,
 ) -> None:
     """Validate the job requirements for a task of a Slurm job based on GPU or CPU per task requirements.
+    This validation is used for CLI and API calls.
 
     Returns: None
 
@@ -22,12 +24,12 @@ def job_gen_task_slurm_validator(
             logging.error("Either gpus_per_task or cpus_per_task must be specified.")
             sys.exit(1)
         raise ValueError("Either gpus_per_task or cpus_per_task must be specified.")
-    if cpus_per_task < 0:
+    if cpus_per_task and cpus_per_task < 0:
         if exit_on_error:
             logging.error("cpus_per_task has to be >= 0.")
             sys.exit(1)
         raise ValueError("cpus_per_task has to be >= 0.")
-    if gpus_per_task < 0:
+    if gpus_per_task and gpus_per_task < 0:
         if exit_on_error:
             logging.error("gpus_per_task has to be >= 0.")
             sys.exit(1)
@@ -61,7 +63,10 @@ def job_gen_task_slurm_validator(
         )
 
     # reject if requires more GPUs than the max GPUs per node for the partition
-    if gpus_per_task * tasks_per_node > req_partition.max_gpus_per_node:
+    if (
+        gpus_per_task
+        and gpus_per_task * tasks_per_node > req_partition.max_gpus_per_node
+    ):
         if exit_on_error:
             logging.error(
                 f"Requested {gpus_per_task=} GPUs with {tasks_per_node=} exceeds the maximum {req_partition.max_gpus_per_node} GPUs per node available in partition '{partition}'"
@@ -72,7 +77,10 @@ def job_gen_task_slurm_validator(
         )
 
     # reject if requires more CPUs than the max CPUs at the partition
-    if cpus_per_task * tasks_per_node > req_partition.max_cpus_per_node:
+    if (
+        cpus_per_task
+        and cpus_per_task * tasks_per_node > req_partition.max_cpus_per_node
+    ):
         if exit_on_error:
             logging.error(
                 f"Requested {cpus_per_task=} CPUs with {tasks_per_node=} exceeds the maximum {req_partition.max_cpus_per_node} CPUs per node available in partition '{partition}'"

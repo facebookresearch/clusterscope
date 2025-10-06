@@ -5,9 +5,10 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 import json
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import click
+from click_option_group import optgroup, RequiredMutuallyExclusiveOptionGroup
 
 from clusterscope.cluster_info import AWSClusterInfo, UnifiedInfo
 from clusterscope.validate import job_gen_task_slurm_validator
@@ -179,21 +180,7 @@ def task():
     pass
 
 
-@task.command()
-@click.option(
-    "--gpus-per-task",
-    "gpus_per_task",
-    default=0,
-    type=click.IntRange(min=0),
-    help="Number of GPUs per task to request",
-)
-@click.option(
-    "--cpus-per-task",
-    "cpus_per_task",
-    default=0,
-    type=click.IntRange(min=0),
-    help="Number of CPUs per task to request",
-)
+@task.command()  # type: ignore[arg-type]
 @click.option("--partition", type=str, required=True, help="Partition to query")
 @click.option(
     "--tasks-per-node",
@@ -208,12 +195,29 @@ def task():
     default="json",
     help="Format to output the job requirements in",
 )
+@optgroup.group(
+    "GPU or CPU Job Request",
+    cls=RequiredMutuallyExclusiveOptionGroup,
+    help="Only one of --gpus-per-task or --cpus-per-task can be specified. For GPU requests, use --gpus-per-task and cpus-per-task will be generated automatically. For CPU requests, use --cpus-per-task.",
+)
+@optgroup.option(
+    "--gpus-per-task",
+    default=None,
+    type=click.IntRange(min=1),
+    help="Number of GPUs per task to request",
+)
+@optgroup.option(  # type: ignore[arg-type]
+    "--cpus-per-task",
+    default=None,
+    type=click.IntRange(min=1),
+    help="Number of CPUs per task to request",
+)
 def slurm(
-    gpus_per_task: int,
-    cpus_per_task: int,
     tasks_per_node: int,
     output_format: str,
     partition: str,
+    gpus_per_task: Optional[int],
+    cpus_per_task: Optional[int],
 ):
     """Generate job requirements for a task of a Slurm job based on GPU or CPU per task requirements."""
     job_gen_task_slurm_validator(

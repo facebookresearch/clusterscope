@@ -14,9 +14,12 @@ click==8.2.1
     # via
     #   clusterscope (pyproject.toml)
     #   black
+    #   click-option-group
     #   moreorless
     #   ufmt
     #   usort
+click-option-group==0.5.8
+    # via clusterscope (pyproject.toml)
 distlib==0.4.0
     # via virtualenv
 filelock==3.19.1
