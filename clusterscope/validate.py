@@ -7,9 +7,9 @@ from clusterscope.slurm.partition import get_partition_info
 
 def job_gen_task_slurm_validator(
     partition: str,
-    gpus_per_task: Optional[int],
-    cpus_per_task: Optional[int],
-    tasks_per_node: int,
+    tasks_per_node: int = 1,
+    gpus_per_task: Optional[int] = None,
+    cpus_per_task: Optional[int] = None,
     exit_on_error: bool = False,
 ) -> None:
     """Validate the job requirements for a task of a Slurm job based on GPU or CPU per task requirements.
@@ -43,6 +43,11 @@ def job_gen_task_slurm_validator(
             logging.error("gpus_per_task has to be > 0.")
             sys.exit(1)
         raise ValueError("gpus_per_task has to be > 0.")
+    if tasks_per_node <= 0:
+        if exit_on_error:
+            logging.error("tasks_per_node has to be > 0.")
+            sys.exit(1)
+        raise ValueError("tasks_per_node has to be > 0.")
 
     partitions = get_partition_info()
     req_partition = next((p for p in partitions if p.name == partition), None)
