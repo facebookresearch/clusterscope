@@ -100,8 +100,8 @@ def local_node_gpu_generation_and_count() -> Dict[str, int]:
 
 def job_gen_task_slurm(
     partition: str,
-    gpus_per_task: int = 0,
-    cpus_per_task: int = 0,
+    gpus_per_task: Optional[int] = None,
+    cpus_per_task: Optional[int] = None,
     tasks_per_node: int = 1,
 ) -> dict:
     """Get the number of CPUs/RAM for each task in the job."""

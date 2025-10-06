@@ -7,9 +7,9 @@ from clusterscope.slurm.partition import get_partition_info
 
 def job_gen_task_slurm_validator(
     partition: str,
-    gpus_per_task: Optional[int],
-    cpus_per_task: Optional[int],
-    tasks_per_node: int,
+    tasks_per_node: int = 1,
+    gpus_per_task: Optional[int] = None,
+    cpus_per_task: Optional[int] = None,
     exit_on_error: bool = False,
 ) -> None:
     """Validate the job requirements for a task of a Slurm job based on GPU or CPU per task requirements.
@@ -24,22 +24,7 @@ def job_gen_task_slurm_validator(
             logging.error("Either gpus_per_task or cpus_per_task must be specified.")
             sys.exit(1)
         raise ValueError("Either gpus_per_task or cpus_per_task must be specified.")
-    if cpus_per_task and cpus_per_task < 0:
-        if exit_on_error:
-            logging.error("cpus_per_task has to be >= 0.")
-            sys.exit(1)
-        raise ValueError("cpus_per_task has to be >= 0.")
-    if gpus_per_task and gpus_per_task < 0:
-        if exit_on_error:
-            logging.error("gpus_per_task has to be >= 0.")
-            sys.exit(1)
-        raise ValueError("gpus_per_task has to be >= 0.")
-    if gpus_per_task == 0 and cpus_per_task == 0:
-        if exit_on_error:
-            logging.error("One of gpus_per_task or cpus_per_task has to be non-zero.")
-            sys.exit(1)
-        raise ValueError("One of gpus_per_task or cpus_per_task has to be non-zero.")
-    if gpus_per_task and cpus_per_task:
+    if gpus_per_task is not None and cpus_per_task is not None:
         if exit_on_error:
             logging.error(
                 "Only one of gpus_per_task or cpus_per_task can be specified. For GPU requests, use gpus_per_task and cpus_per_task will be generated automatically. For CPU requests, use cpus_per_task only."
@@ -48,6 +33,21 @@ def job_gen_task_slurm_validator(
         raise ValueError(
             "Only one of gpus_per_task or cpus_per_task can be specified. For GPU requests, use gpus_per_task and cpus_per_task will be generated automatically. For CPU requests, use cpus_per_task only."
         )
+    if cpus_per_task is not None and cpus_per_task <= 0:
+        if exit_on_error:
+            logging.error("cpus_per_task has to be > 0.")
+            sys.exit(1)
+        raise ValueError("cpus_per_task has to be > 0.")
+    if gpus_per_task is not None and gpus_per_task <= 0:
+        if exit_on_error:
+            logging.error("gpus_per_task has to be > 0.")
+            sys.exit(1)
+        raise ValueError("gpus_per_task has to be > 0.")
+    if tasks_per_node <= 0:
+        if exit_on_error:
+            logging.error("tasks_per_node has to be > 0.")
+            sys.exit(1)
+        raise ValueError("tasks_per_node has to be > 0.")
 
     partitions = get_partition_info()
     req_partition = next((p for p in partitions if p.name == partition), None)
