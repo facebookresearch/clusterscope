@@ -21,7 +21,7 @@ class TestCLIArgumentCombinations(unittest.TestCase):
 
     def test_version_command(self):
         """Test version command works independently."""
-        with patch("clusterscope.cli.get_version", return_value="1.0.0"):
+        with patch("importlib.metadata.version", return_value="1.0.0"):
             result = self.runner.invoke(cli, ["version"])
             self.assertEqual(result.exit_code, 0)
             self.assertIn("clusterscope version 1.0.0", result.output)
