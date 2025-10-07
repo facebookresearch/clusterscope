@@ -31,6 +31,7 @@ class TestResourceShape(unittest.TestCase):
             cpus_per_task=24,
             memory="225G",
             tasks_per_node=1,
+            nodes=1,
         )
 
         # Test immutability (NamedTuple characteristic)
@@ -61,6 +62,7 @@ class TestResourceShape(unittest.TestCase):
                     cpus_per_task=8,
                     memory=memory_str,
                     tasks_per_node=1,
+                    nodes=1,
                 )
                 self.assertEqual(parse_memory_to_gb(resource.memory), expected_gb)
 
@@ -84,6 +86,7 @@ class TestResourceShape(unittest.TestCase):
                     cpus_per_task=cpus_per_task,
                     memory=memory,
                     tasks_per_node=tasks_per_node,
+                    nodes=1,
                 )
                 result = json.loads(resource.to_json())
 
@@ -114,6 +117,7 @@ class TestResourceShape(unittest.TestCase):
                     cpus_per_task=cpus_per_task,
                     memory=memory,
                     tasks_per_node=tasks_per_node,
+                    nodes=1,
                 )
                 result = resource.to_sbatch()
                 lines = result.split("\n")
@@ -145,6 +149,7 @@ class TestResourceShape(unittest.TestCase):
                     cpus_per_task=cpus_per_task,
                     memory=memory,
                     tasks_per_node=tasks_per_node,
+                    nodes=1,
                 )
 
                 result = resource.to_srun()
@@ -176,6 +181,7 @@ class TestResourceShape(unittest.TestCase):
                     cpus_per_task=cpus_per_task,
                     memory=memory,
                     tasks_per_node=tasks_per_node,
+                    nodes=1,
                 )
                 result = json.loads(resource.to_submitit())
 

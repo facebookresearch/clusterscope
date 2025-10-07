@@ -942,6 +942,7 @@ class TestResourceRequirementMethods(unittest.TestCase):
             cpus_per_task=24,
             memory="225G",
             tasks_per_node=1,
+            nodes=1,
         )
 
         # Test that it's immutable (characteristic of NamedTuple)

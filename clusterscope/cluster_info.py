@@ -26,6 +26,7 @@ class ResourceShape(NamedTuple):
     memory: str
     tasks_per_node: int
     slurm_partition: str
+    nodes: int
     gpus_per_task: Optional[int] = None
 
     def to_dict(self) -> dict:
@@ -251,6 +252,7 @@ class UnifiedInfo:
         cpus_per_task: Optional[int] = None,
         gpus_per_task: Optional[int] = None,
         tasks_per_node: int = 1,
+        nodes: int = 1,
     ) -> ResourceShape:
         """Calculate resource requirements for better GPU packing based on node's GPU configuration.
 
@@ -320,6 +322,7 @@ class UnifiedInfo:
             gpus_per_task=gpus_per_task,
             memory=memory,
             tasks_per_node=tasks_per_node,
+            nodes=nodes,
         )
 
 
