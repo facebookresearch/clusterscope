@@ -191,7 +191,7 @@ def task():
 @click.option(
     "--format",
     "output_format",
-    type=click.Choice(["json", "sbatch", "srun", "submitit", "salloc"]),
+    type=click.Choice(["json", "sbatch", "slurm_directives", "slurm_cli", "submitit"]),
     default="json",
     help="Format to output the job requirements in",
 )
