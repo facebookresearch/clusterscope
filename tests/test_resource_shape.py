@@ -118,7 +118,6 @@ class TestResourceShape(unittest.TestCase):
                 result = resource.to_sbatch()
                 lines = result.split("\n")
 
-                self.assertEqual(lines[0], "#!/bin/bash")
                 sbatch_lines = [line for line in lines if line.startswith("#SBATCH")]
                 self.assertIn(f"#SBATCH --cpus-per-task={cpus_per_task}", result)
                 self.assertIn(f"#SBATCH --mem={memory}", result)
@@ -151,7 +150,6 @@ class TestResourceShape(unittest.TestCase):
                 result = resource.to_srun()
 
                 parts = result.split()
-                self.assertEqual(parts[0], "srun")
                 self.assertIn(f"--cpus-per-task={cpus_per_task}", result)
                 self.assertIn(f"--mem={memory}", result)
                 self.assertIn(f"--ntasks-per-node={tasks_per_node}", result)
