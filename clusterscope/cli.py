@@ -73,9 +73,12 @@ def cpus(partition: str):
     if partition is not None:
         validate_partition_exists(partition=partition, exit_on_error=True)
     unified_info = UnifiedInfo(partition=partition)
-    cpus_per_node = unified_info.get_cpus_per_node()
-    click.echo("CPU counts per node:")
-    click.echo(cpus_per_node)
+    cpu_info = unified_info.get_cpus_per_node()
+    click.echo("CPU information:")
+    for cpu in cpu_info:
+        if partition is not None and partition != cpu.partition:
+            continue
+        click.echo(f"  partition: {cpu.partition}, cpu_count: {cpu.cpu_count}")
 
 
 @cli.command()

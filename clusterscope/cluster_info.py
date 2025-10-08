@@ -136,6 +136,13 @@ class MemInfo(NamedTuple):
     partition: Optional[str] = None
 
 
+class CPUInfo(NamedTuple):
+    """Represents CPU information for a host."""
+
+    cpu_count: int
+    partition: Optional[str] = None
+
+
 # Common NVIDIA GPU types
 NVIDIA_GPU_TYPES = {
     "A100": "A100",
@@ -212,7 +219,7 @@ class UnifiedInfo:
             return self.slurm_cluster_info.get_slurm_version()
         return "0"
 
-    def get_cpus_per_node(self) -> int:
+    def get_cpus_per_node(self) -> list[CPUInfo]:
         """Get the number of CPUs for each node in the cluster. Returns 0 if not a Slurm cluster.
 
         Returns:
@@ -306,12 +313,14 @@ class UnifiedInfo:
             raise ValueError("tasks_per_node must be at least 1")
 
         self.partition = partition
-        total_cpus_per_node = self.get_cpus_per_node()
+        total_cpus_per_node = self.get_cpus_per_node()[0]
         total_ram_per_node = self.get_mem_per_node_MB()[0]
 
         # CPU Request
         if cpus_per_task is not None:
-            ram_mb_per_cpu = total_ram_per_node.mem_total_MB / total_cpus_per_node
+            ram_mb_per_cpu = (
+                total_ram_per_node.mem_total_MB / total_cpus_per_node.cpu_count
+            )
             total_required_ram_mb = math.floor(
                 ram_mb_per_cpu * cpus_per_task * tasks_per_node
             )
@@ -319,7 +328,7 @@ class UnifiedInfo:
         elif gpus_per_task is not None:
             total_gpus_per_node = self.get_total_gpus_per_node()
 
-            cpu_cores_per_gpu = total_cpus_per_node / total_gpus_per_node
+            cpu_cores_per_gpu = total_cpus_per_node.cpu_count / total_gpus_per_node
             total_required_cpu_cores_per_task = math.floor(
                 cpu_cores_per_gpu * gpus_per_task
             )
@@ -353,7 +362,7 @@ class UnifiedInfo:
 
 
 class DarwinInfo:
-    def get_cpu_count(self, timeout: int = 60) -> int:
+    def get_cpu_count(self, timeout: int = 60) -> list[CPUInfo]:
         """Get the number of CPUs on the local node.
 
         Returns:
@@ -364,7 +373,7 @@ class DarwinInfo:
         """
         try:
             result = run_cli(["sysctl", "-n", "hw.ncpu"], text=True, timeout=timeout)
-            return int(result.strip())
+            return [CPUInfo(cpu_count=int(result.strip()))]
         except RuntimeError as e:
             raise RuntimeError(f"Failed to get CPU information: {str(e)}")
 
@@ -391,7 +400,7 @@ class DarwinInfo:
 
 
 class LinuxInfo:
-    def get_cpu_count(self, timeout: int = 60) -> int:
+    def get_cpu_count(self, timeout: int = 60) -> list[CPUInfo]:
         """Get the number of CPUs on the local node.
 
         Returns:
@@ -402,7 +411,7 @@ class LinuxInfo:
         """
         try:
             result = run_cli(["nproc", "--all"], text=True, timeout=timeout)
-            return int(result.strip())
+            return [CPUInfo(cpu_count=int(result.strip()))]
         except RuntimeError as e:
             raise RuntimeError(f"Failed to get CPU information: {str(e)}")
 
@@ -467,7 +476,7 @@ class LocalNodeInfo:
         except (FileNotFoundError, subprocess.CalledProcessError):
             return False
 
-    def get_cpu_count(self, timeout: int = 60) -> int:
+    def get_cpu_count(self, timeout: int = 60) -> list[CPUInfo]:
         """Get the number of CPUs on the local node.
 
         Returns:
@@ -837,7 +846,7 @@ class SlurmClusterInfo:
             logging.error(f"Failed to get CPU information: {str(e)}")
             raise RuntimeError(f"Failed to get CPU information: {str(e)}")
 
-    def get_cpus_per_node(self) -> int:
+    def get_cpus_per_node(self) -> list[CPUInfo]:
         """Get the minimum number of CPUs for each node in the cluster.
 
         Returns:
@@ -847,7 +856,7 @@ class SlurmClusterInfo:
             RuntimeError: If unable to retrieve node information or if nodes have different CPU counts.
         """
         try:
-            cmd = ["sinfo", "-o", "%100c", "--noheader"]
+            cmd = ["sinfo", "-o", "%100c,%100P", "--noheader"]
             if self.partition:
                 cmd.extend(["-p", self.partition])
 
@@ -860,10 +869,14 @@ class SlurmClusterInfo:
             )
 
             logging.debug("Parsing node information...")
+            all_cpus = []
             for line in result.stdout.splitlines():
-                cpus = int(line.strip("+ "))
-                return cpus
-            raise RuntimeError(f"No CPU information found in: {result.stdout}")
+                cpus, partition = line.split(", ")
+                cpu_count = int(cpus.strip("+ "))
+                all_cpus.append(CPUInfo(cpu_count=cpu_count, partition=partition))
+            if all_cpus == []:
+                raise RuntimeError(f"No CPU information found in: {result.stdout}")
+            return all_cpus
         except (subprocess.SubprocessError, FileNotFoundError) as e:
             logging.error(f"Failed to get CPU information: {str(e)}")
             raise RuntimeError(f"Failed to get CPU information: {str(e)}")

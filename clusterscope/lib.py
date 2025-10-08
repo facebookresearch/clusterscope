@@ -5,7 +5,13 @@
 # LICENSE file in the root directory of this source tree.
 from typing import Optional, Tuple
 
-from clusterscope.cluster_info import GPUInfo, LocalNodeInfo, MemInfo, UnifiedInfo
+from clusterscope.cluster_info import (
+    CPUInfo,
+    GPUInfo,
+    LocalNodeInfo,
+    MemInfo,
+    UnifiedInfo,
+)
 from clusterscope.job_info import JobInfo
 from clusterscope.validate import (
     job_gen_task_slurm_validator,
@@ -60,7 +66,7 @@ def slurm_version(partition: Optional[str] = None) -> Tuple[int, ...]:
     return version
 
 
-def cpus(partition: Optional[str] = None) -> int:
+def cpus(partition: Optional[str] = None) -> list[CPUInfo] | CPUInfo:
     """Get the number of CPUs for each node in the cluster. Returns the number of local cpus if not on a cluster.
 
     Args:
@@ -68,7 +74,11 @@ def cpus(partition: Optional[str] = None) -> int:
     """
     if partition is not None:
         validate_partition_exists(partition=partition)
-    return get_unified_info(partition).get_cpus_per_node()
+    cpu_info = get_unified_info(partition).get_cpus_per_node()
+    for cpu in cpu_info:
+        if partition is not None and partition == cpu.partition:
+            return cpu
+    return cpu_info
 
 
 def mem(
