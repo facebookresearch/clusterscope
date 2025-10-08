@@ -871,9 +871,11 @@ class SlurmClusterInfo:
             logging.debug("Parsing node information...")
             all_cpus = []
             for line in result.stdout.splitlines():
-                cpus, partition = line.split(", ")
+                cpus, partition = line.split(",")
                 cpu_count = int(cpus.strip("+ "))
-                all_cpus.append(CPUInfo(cpu_count=cpu_count, partition=partition))
+                all_cpus.append(
+                    CPUInfo(cpu_count=cpu_count, partition=partition.strip("* "))
+                )
             if all_cpus == []:
                 raise RuntimeError(f"No CPU information found in: {result.stdout}")
             return all_cpus
