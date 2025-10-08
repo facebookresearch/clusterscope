@@ -26,6 +26,7 @@ class ResourceShape(NamedTuple):
     memory: str
     tasks_per_node: int
     slurm_partition: str
+    nodes: int
     gpus_per_task: Optional[int] = None
 
     def to_dict(self) -> dict:
@@ -50,7 +51,6 @@ class ResourceShape(NamedTuple):
             str: SBATCH script with resource directives
         """
         lines = [
-            "#!/bin/bash",
             f"#SBATCH --cpus-per-task={self.cpus_per_task}",
             f"#SBATCH --mem={self.memory}",
             f"#SBATCH --ntasks-per-node={self.tasks_per_node}",
@@ -67,24 +67,6 @@ class ResourceShape(NamedTuple):
             str: srun command with resource specifications
         """
         cmd_parts = [
-            "srun",
-            f"--cpus-per-task={self.cpus_per_task}",
-            f"--mem={self.memory}",
-            f"--ntasks-per-node={self.tasks_per_node}",
-            f"--partition={self.slurm_partition}",
-        ]
-        if self.gpus_per_task and self.gpus_per_task > 0:
-            cmd_parts.append(f"--gpus-per-task={self.gpus_per_task}")
-        return " ".join(cmd_parts)
-
-    def to_salloc(self) -> str:
-        """Convert ResourceShape to salloc command format.
-
-        Returns:
-            str: salloc command with resource specifications
-        """
-        cmd_parts = [
-            "salloc",
             f"--cpus-per-task={self.cpus_per_task}",
             f"--mem={self.memory}",
             f"--ntasks-per-node={self.tasks_per_node}",
@@ -271,6 +253,7 @@ class UnifiedInfo:
         cpus_per_task: Optional[int] = None,
         gpus_per_task: Optional[int] = None,
         tasks_per_node: int = 1,
+        nodes: int = 1,
     ) -> ResourceShape:
         """Calculate resource requirements for better GPU packing based on node's GPU configuration.
 
@@ -340,6 +323,7 @@ class UnifiedInfo:
             gpus_per_task=gpus_per_task,
             memory=memory,
             tasks_per_node=tasks_per_node,
+            nodes=nodes,
         )
 
 
@@ -1009,7 +993,5 @@ class AWSClusterInfo:
             "FI_PROVIDER": "efa",
             "FI_EFA_USE_DEVICE_RDMA": "1",
             "NCCL_DEBUG": "INFO",
-            "NCCL_PROTO": "simple",
-            "NCCL_IB_DISABLE": "1",
-            "NCCL_SOCKET_IFNAME": "ens,eth,en",
+            "NCCL_SOCKET_IFNAME": "eth0",
         }
