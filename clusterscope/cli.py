@@ -101,34 +101,47 @@ def gpus(partition: str, generations: bool, counts: bool, vendor: bool):
     unified_info = UnifiedInfo(partition=partition)
 
     if vendor:
-        vendor_info = unified_info.get_gpu_vendor()
-        click.echo(f"Primary GPU vendor: {vendor_info}")
+        gpus = unified_info.get_gpu_generation_and_count()
+        all_vendors = set()
+        if gpus:
+            click.echo("GPU Vendors:")
+            for gpu in gpus:
+                if partition is not None and partition != gpu.partition:
+                    continue
+                if gpu.vendor in all_vendors:
+                    continue
+                all_vendors.add(gpu.vendor)
+                click.echo(f"- {gpu.vendor}")
     elif counts:
-        gpu_counts = unified_info.get_gpu_generation_and_count()
-        if gpu_counts:
-            click.echo("GPU counts by type:")
-            for gpu_type, count in sorted(gpu_counts.items()):
-                click.echo(f"  {gpu_type}: {count}")
+        gpus = unified_info.get_gpu_generation_and_count()
+        if gpus:
+            click.echo("GPU Gen, Count, Partition:")
+            for gpu in gpus:
+                if partition is not None and partition != gpu.partition:
+                    continue
+                click.echo(f"- {gpu.gpu_gen}, {gpu.gpu_count}, {gpu.partition}")
         else:
             click.echo("No GPUs found")
     elif generations:
-        gpu_counts = unified_info.get_gpu_generation_and_count()
-        if gpu_counts:
+        gpus = unified_info.get_gpu_generation_and_count()
+        if gpus:
             click.echo("GPU generations available:")
-            for gen in sorted(gpu_counts.keys()):
-                click.echo(f"- {gen}")
+            for gpu in gpus:
+                if partition is not None and partition != gpu.partition:
+                    continue
+                click.echo(f"- {gpu.gpu_gen}, {gpu.partition}")
         else:
             click.echo("No GPUs found")
     else:
-        # Default: show both vendor and detailed info
-        vendor_info = unified_info.get_gpu_vendor()
-        gpu_counts = unified_info.get_gpu_generation_and_count()
-
-        click.echo(f"GPU vendor: {vendor_info}")
-        if gpu_counts:
+        gpus = unified_info.get_gpu_generation_and_count()
+        if gpus:
             click.echo("GPU information:")
-            for gpu_type, count in sorted(gpu_counts.items()):
-                click.echo(f"  {gpu_type}: {count}")
+            for gpu in gpus:
+                if partition is not None and partition != gpu.partition:
+                    continue
+                click.echo(
+                    f"  partition: {gpu.partition}, gpu_gen: {gpu.gpu_gen}, count: {gpu.gpu_count}, vendor: {gpu.vendor}"
+                )
         else:
             click.echo("No GPUs found")
 

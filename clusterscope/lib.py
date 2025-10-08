@@ -3,9 +3,9 @@
 
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
-from typing import Dict, Literal, Optional, Tuple
+from typing import Literal, Optional, Tuple
 
-from clusterscope.cluster_info import LocalNodeInfo, UnifiedInfo
+from clusterscope.cluster_info import GPUInfo, LocalNodeInfo, UnifiedInfo
 from clusterscope.job_info import JobInfo
 from clusterscope.validate import job_gen_task_slurm_validator
 
@@ -93,7 +93,7 @@ def get_tmp_dir():
     return tmp
 
 
-def local_node_gpu_generation_and_count() -> Dict[str, int]:
+def local_node_gpu_generation_and_count() -> list[GPUInfo]:
     """Get the GPU generation and count for the local node."""
     return local_info.get_gpu_generation_and_count()
 

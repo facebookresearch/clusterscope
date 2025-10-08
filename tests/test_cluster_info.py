@@ -430,38 +430,6 @@ class TestLocalNodeInfo(unittest.TestCase):
         mock_run.side_effect = subprocess.CalledProcessError(1, ["rocm-smi"])
         self.assertFalse(self.local_node_info.has_amd_gpus())
 
-    @patch.object(LocalNodeInfo, "has_nvidia_gpus")
-    @patch.object(LocalNodeInfo, "has_amd_gpus")
-    def test_get_gpu_vendor_nvidia(self, mock_has_amd, mock_has_nvidia):
-        """Test get_gpu_vendor returns 'nvidia' when NVIDIA GPUs are present."""
-        mock_has_nvidia.return_value = True
-        mock_has_amd.return_value = False
-        self.assertEqual(self.local_node_info.get_gpu_vendor(), "nvidia")
-
-    @patch.object(LocalNodeInfo, "has_nvidia_gpus")
-    @patch.object(LocalNodeInfo, "has_amd_gpus")
-    def test_get_gpu_vendor_amd(self, mock_has_amd, mock_has_nvidia):
-        """Test get_gpu_vendor returns 'amd' when AMD GPUs are present."""
-        mock_has_nvidia.return_value = False
-        mock_has_amd.return_value = True
-        self.assertEqual(self.local_node_info.get_gpu_vendor(), "amd")
-
-    @patch.object(LocalNodeInfo, "has_nvidia_gpus")
-    @patch.object(LocalNodeInfo, "has_amd_gpus")
-    def test_get_gpu_vendor_none(self, mock_has_amd, mock_has_nvidia):
-        """Test get_gpu_vendor returns 'none' when no GPUs are present."""
-        mock_has_nvidia.return_value = False
-        mock_has_amd.return_value = False
-        self.assertEqual(self.local_node_info.get_gpu_vendor(), "none")
-
-    @patch.object(LocalNodeInfo, "has_nvidia_gpus")
-    @patch.object(LocalNodeInfo, "has_amd_gpus")
-    def test_get_gpu_vendor_nvidia_priority(self, mock_has_amd, mock_has_nvidia):
-        """Test get_gpu_vendor returns 'nvidia' when both GPU types are present (NVIDIA has priority)."""
-        mock_has_nvidia.return_value = True
-        mock_has_amd.return_value = True
-        self.assertEqual(self.local_node_info.get_gpu_vendor(), "nvidia")
-
     @patch("clusterscope.cluster_info.run_cli")
     def test_get_nvidia_gpu_info_success(self, mock_run_cli):
         """Test successful NVIDIA GPU information retrieval."""
