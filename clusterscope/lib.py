@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 from typing import Literal, Optional, Tuple
 
-from clusterscope.cluster_info import GPUInfo, LocalNodeInfo, UnifiedInfo
+from clusterscope.cluster_info import GPUInfo, LocalNodeInfo, UnifiedInfo, MemInfo
 from clusterscope.job_info import JobInfo
 from clusterscope.validate import job_gen_task_slurm_validator
 
@@ -67,24 +67,18 @@ def cpus(partition: Optional[str] = None) -> int:
 
 
 def mem(
-    to_unit: Literal["MB", "GB"] = "GB",
     partition: Optional[str] = None,
-) -> int:
+) -> list[MemInfo] | MemInfo:
     """Get the amount of memory for each node in the cluster. Returns the local memory if not on a cluster.
 
     Args:
         to_unit: Unit to return memory in ("MB" or "GB").
         partition (str, optional): Slurm partition name to filter queries.
     """
-    mem = get_unified_info(partition).get_mem_per_node_MB()
-    if to_unit == "MB":
-        pass
-    elif to_unit == "GB":
-        mem //= 1000
-    else:
-        raise ValueError(
-            f"{to_unit} is not a supported unit. Currently supported units: MB, GB"
-        )
+    mem_info = get_unified_info(partition).get_mem_per_node_MB()
+    for mem in mem_info:
+        if partition is not None and partition == mem.partition:
+            return mem
     return mem
 
 

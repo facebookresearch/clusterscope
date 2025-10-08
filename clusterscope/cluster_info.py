@@ -128,6 +128,14 @@ class GPUInfo(NamedTuple):
     partition: Optional[str] = None
 
 
+class MemInfo(NamedTuple):
+    """Represents memory information for a host."""
+
+    mem_total_MB: int
+    mem_total_GB: int
+    partition: Optional[str] = None
+
+
 # Common NVIDIA GPU types
 NVIDIA_GPU_TYPES = {
     "A100": "A100",
@@ -214,7 +222,7 @@ class UnifiedInfo:
             return self.slurm_cluster_info.get_cpus_per_node()
         return self.local_node_info.get_cpu_count()
 
-    def get_mem_per_node_MB(self) -> int:
+    def get_mem_per_node_MB(self) -> list[MemInfo]:
         """Return the lowest amount of mem configured across all nodes in the cluster. Returns 0 if not a Slurm cluster.
 
         Returns:
@@ -744,7 +752,7 @@ class SlurmClusterInfo:
         except (subprocess.SubprocessError, FileNotFoundError) as e:
             raise RuntimeError(f"Failed to get cluster name: {str(e)}")
 
-    def get_mem_per_node_MB(self) -> int:
+    def get_mem_per_node_MB(self) -> list[MemInfo]:
         """Get the lowest memory available per node in the cluster.
 
         Returns:
@@ -754,7 +762,7 @@ class SlurmClusterInfo:
             RuntimeError: If unable to retrieve node information.
         """
         try:
-            cmd = ["sinfo", "-o", "%100m", "--noconvert", "--noheader"]
+            cmd = ["sinfo", "-o", "%100m,%P", "--noconvert", "--noheader"]
             if self.partition:
                 cmd.extend(["-p", self.partition])
 
@@ -767,9 +775,18 @@ class SlurmClusterInfo:
             )
 
             logging.debug("Parsing node information...")
+            results = []
             for line in result.stdout.splitlines():
-                mem = int(line.strip("+ "))
-                return mem
+                mem, partition = line.split(",")
+                mem = int(mem.strip("+ "))
+                results.append(
+                    MemInfo(
+                        mem_total_MB=mem,
+                        mem_total_GB=mem // 1024,
+                        partition=partition.strip("* "),
+                    )
+                )
+            return results
             raise RuntimeError(f"No mem information found in: {result.stdout}")
         except (subprocess.SubprocessError, FileNotFoundError) as e:
             logging.error(f"Failed to get Slurm memory information: {str(e)}")

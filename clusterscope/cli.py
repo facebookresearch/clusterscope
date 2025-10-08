@@ -81,9 +81,14 @@ def cpus(partition: str):
 def mem(partition: str):
     """Show memory information per node."""
     unified_info = UnifiedInfo(partition=partition)
-    mem_per_node = unified_info.get_mem_per_node_MB()
-    click.echo("Mem per node MB:")
-    click.echo(mem_per_node)
+    mem_info = unified_info.get_mem_per_node_MB()
+    click.echo("Mem information:")
+    for mem in mem_info:
+        if partition is not None and partition != mem.partition:
+            continue
+        click.echo(
+            f"  partition: {mem.partition}, mem_total_MB: {mem.mem_total_MB}, mem_total_GB: {mem.mem_total_GB}"
+        )
 
 
 @cli.command()
