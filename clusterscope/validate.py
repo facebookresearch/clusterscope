@@ -2,7 +2,25 @@ import logging
 import sys
 from typing import Optional
 
-from clusterscope.slurm.partition import get_partition_info
+from clusterscope.slurm.partition import get_partition_info, PartitionInfo
+
+
+def validate_partition_exists(
+    partition: str, exit_on_error: bool = False
+) -> PartitionInfo:
+    partitions = get_partition_info()
+    req_partition = next((p for p in partitions if p.name == partition), None)
+
+    if req_partition is None:
+        if exit_on_error:
+            logging.error(
+                f"Partition {partition} not found. Available partitions: {[p.name for p in partitions]}"
+            )
+            sys.exit(1)
+        raise ValueError(
+            f"Partition {partition} not found. Available partitions: {[p.name for p in partitions]}"
+        )
+    return req_partition
 
 
 def job_gen_task_slurm_validator(
@@ -49,18 +67,10 @@ def job_gen_task_slurm_validator(
             sys.exit(1)
         raise ValueError("tasks_per_node has to be > 0.")
 
-    partitions = get_partition_info()
-    req_partition = next((p for p in partitions if p.name == partition), None)
-
-    if req_partition is None:
-        if exit_on_error:
-            logging.error(
-                f"Partition {partition} not found. Available partitions: {[p.name for p in partitions]}"
-            )
-            sys.exit(1)
-        raise ValueError(
-            f"Partition {partition} not found. Available partitions: {[p.name for p in partitions]}"
-        )
+    req_partition = validate_partition_exists(
+        partition=partition,
+        exit_on_error=exit_on_error,
+    )
 
     # reject if requires more GPUs than the max GPUs per node for the partition
     if (

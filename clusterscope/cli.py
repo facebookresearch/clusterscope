@@ -11,7 +11,10 @@ import click
 from click_option_group import optgroup, RequiredMutuallyExclusiveOptionGroup
 
 from clusterscope.cluster_info import AWSClusterInfo, UnifiedInfo
-from clusterscope.validate import job_gen_task_slurm_validator
+from clusterscope.validate import (
+    job_gen_task_slurm_validator,
+    validate_partition_exists,
+)
 
 
 def format_dict(data: Dict[str, Any]) -> str:
@@ -49,6 +52,8 @@ def version():
 )
 def info(partition: str):
     """Show basic cluster information."""
+    if partition is not None:
+        validate_partition_exists(partition=partition, exit_on_error=True)
     unified_info = UnifiedInfo(partition=partition)
     cluster_name = unified_info.get_cluster_name()
     slurm_version = unified_info.get_slurm_version()
@@ -65,6 +70,8 @@ def info(partition: str):
 )
 def cpus(partition: str):
     """Show CPU counts per node."""
+    if partition is not None:
+        validate_partition_exists(partition=partition, exit_on_error=True)
     unified_info = UnifiedInfo(partition=partition)
     cpus_per_node = unified_info.get_cpus_per_node()
     click.echo("CPU counts per node:")
@@ -80,6 +87,8 @@ def cpus(partition: str):
 )
 def mem(partition: str):
     """Show memory information per node."""
+    if partition is not None:
+        validate_partition_exists(partition=partition, exit_on_error=True)
     unified_info = UnifiedInfo(partition=partition)
     mem_info = unified_info.get_mem_per_node_MB()
     click.echo("Mem information:")
@@ -103,6 +112,8 @@ def mem(partition: str):
 @click.option("--vendor", is_flag=True, help="Show GPU vendor information")
 def gpus(partition: str, generations: bool, counts: bool, vendor: bool):
     """Show GPU information."""
+    if partition is not None:
+        validate_partition_exists(partition=partition, exit_on_error=True)
     unified_info = UnifiedInfo(partition=partition)
 
     if vendor:

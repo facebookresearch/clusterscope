@@ -3,11 +3,14 @@
 
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
-from typing import Literal, Optional, Tuple
+from typing import Optional, Tuple
 
-from clusterscope.cluster_info import GPUInfo, LocalNodeInfo, UnifiedInfo, MemInfo
+from clusterscope.cluster_info import GPUInfo, LocalNodeInfo, MemInfo, UnifiedInfo
 from clusterscope.job_info import JobInfo
-from clusterscope.validate import job_gen_task_slurm_validator
+from clusterscope.validate import (
+    job_gen_task_slurm_validator,
+    validate_partition_exists,
+)
 
 # Partition-aware unified info instance
 _unified_info: Optional[UnifiedInfo] = None
@@ -63,6 +66,8 @@ def cpus(partition: Optional[str] = None) -> int:
     Args:
         partition (str, optional): Slurm partition name to filter queries.
     """
+    if partition is not None:
+        validate_partition_exists(partition=partition)
     return get_unified_info(partition).get_cpus_per_node()
 
 
@@ -75,11 +80,13 @@ def mem(
         to_unit: Unit to return memory in ("MB" or "GB").
         partition (str, optional): Slurm partition name to filter queries.
     """
+    if partition is not None:
+        validate_partition_exists(partition=partition)
     mem_info = get_unified_info(partition).get_mem_per_node_MB()
     for mem in mem_info:
         if partition is not None and partition == mem.partition:
             return mem
-    return mem
+    return mem_info
 
 
 def get_tmp_dir():

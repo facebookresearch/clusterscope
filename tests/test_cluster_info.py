@@ -13,6 +13,7 @@ from clusterscope.cluster_info import (
     GPUInfo,
     LinuxInfo,
     LocalNodeInfo,
+    MemInfo,
     ResourceShape,
     run_cli,
     SlurmClusterInfo,
@@ -117,23 +118,29 @@ class TestSlurmClusterInfo(unittest.TestCase):
     @patch("subprocess.run")
     def test_get_mem_per_node_MB(self, mock_run):
         # Mock successful cluster name retrieval
-        mock_run.return_value = MagicMock(stdout="123456+", returncode=0)
-        self.assertEqual(self.cluster_info.get_mem_per_node_MB(), 123456)
+        mock_run.return_value = MagicMock(
+            stdout="123456+, test_partition", returncode=0
+        )
+        self.assertEqual(
+            self.cluster_info.get_mem_per_node_MB()[0].mem_total_MB, 123456
+        )
 
     @patch("subprocess.run")
     @patch("clusterscope.cache.load", return_value={})  # Mock empty cache
     @patch("clusterscope.cache.save")  # Mock cache save function
     def test_get_mem_per_node_MB_with_partition(self, mock_save, mock_load, mock_run):
         # Mock successful memory per node retrieval with partition
-        mock_run.return_value = MagicMock(stdout="123456+", returncode=0)
+        mock_run.return_value = MagicMock(
+            stdout="123456+, test_partition", returncode=0
+        )
         result = self.cluster_info_with_partition.get_mem_per_node_MB()
-        self.assertEqual(result, 123456)
+        self.assertEqual(result[0].mem_total_MB, 123456)
         # Verify that partition argument was passed to subprocess.run
         mock_run.assert_called_with(
             [
                 "sinfo",
                 "-o",
-                "%100m",
+                "%100m,%100P",
                 "--noconvert",
                 "--noheader",
                 "-p",
@@ -734,7 +741,7 @@ class TestResourceRequirementMethods(unittest.TestCase):
         """Test get_task_resource_requirements with 1 GPU on an 8-GPU node."""
         mock_total_gpus.return_value = 8
         mock_cpus.return_value = 192
-        mock_mem.return_value = 1843200  # 1.8TB in MB
+        mock_mem.return_value = [MemInfo(mem_total_MB=1843200, mem_total_GB=1800)]
 
         result = self.unified_info.get_task_resource_requirements(
             partition="test_partition", gpus_per_task=1
@@ -753,7 +760,7 @@ class TestResourceRequirementMethods(unittest.TestCase):
         """Test get_task_resource_requirements with 4 GPUs on an 8-GPU node."""
         mock_total_gpus.return_value = 8
         mock_cpus.return_value = 192
-        mock_mem.return_value = 1843200
+        mock_mem.return_value = [MemInfo(mem_total_MB=1843200, mem_total_GB=1800)]
 
         result = self.unified_info.get_task_resource_requirements(
             partition="test_partition", gpus_per_task=4
@@ -772,7 +779,7 @@ class TestResourceRequirementMethods(unittest.TestCase):
         """Test get_task_resource_requirements with all 8 GPUs (full node)."""
         mock_total_gpus.return_value = 8
         mock_cpus.return_value = 192
-        mock_mem.return_value = 1843200
+        mock_mem.return_value = [MemInfo(mem_total_MB=1843200, mem_total_GB=1800)]
 
         result = self.unified_info.get_task_resource_requirements(
             partition="test_partition", gpus_per_task=8
@@ -791,7 +798,7 @@ class TestResourceRequirementMethods(unittest.TestCase):
         """Test get_task_resource_requirements on a 4-GPU node configuration."""
         mock_total_gpus.return_value = 4
         mock_cpus.return_value = 64
-        mock_mem.return_value = 524288  # 512GB in MB
+        mock_mem.return_value = [MemInfo(mem_total_MB=524288, mem_total_GB=512)]
 
         # Test 1 GPU on 4-GPU node
         result = self.unified_info.get_task_resource_requirements(
@@ -810,7 +817,7 @@ class TestResourceRequirementMethods(unittest.TestCase):
         """Test get_task_resource_requirements with all 8 GPUs (full node)."""
         mock_total_gpus.return_value = 8
         mock_cpus.return_value = 192
-        mock_mem.return_value = 1843200
+        mock_mem.return_value = [MemInfo(mem_total_MB=1843200, mem_total_GB=1800)]
 
         result = self.unified_info.get_task_resource_requirements(
             partition="test_partition", gpus_per_task=8
@@ -827,7 +834,7 @@ class TestResourceRequirementMethods(unittest.TestCase):
     ):
         """Test get_task_resource_requirements on a 192-CPU node configuration."""
         mock_cpus.return_value = 192
-        mock_mem.return_value = 524288  # 512GB in MB
+        mock_mem.return_value = [MemInfo(mem_total_MB=524288, mem_total_GB=512)]
 
         result = self.unified_info.get_task_resource_requirements(
             partition="test_partition",
@@ -845,7 +852,7 @@ class TestResourceRequirementMethods(unittest.TestCase):
     ):
         """Test get_task_resource_requirements on a 192-CPU node configuration."""
         mock_cpus.return_value = 192
-        mock_mem.return_value = 524288  # 512GB in MB
+        mock_mem.return_value = [MemInfo(mem_total_MB=524288, mem_total_GB=512)]
 
         result = self.unified_info.get_task_resource_requirements(
             partition="test_partition",
@@ -865,7 +872,7 @@ class TestResourceRequirementMethods(unittest.TestCase):
         """Test getResRequirements with multiple tasks per node."""
         mock_total_gpus.return_value = 8
         mock_cpus.return_value = 192
-        mock_mem.return_value = 1843200
+        mock_mem.return_value = [MemInfo(mem_total_MB=1843200, mem_total_GB=1800)]
 
         result = self.unified_info.get_task_resource_requirements(
             partition="test_partition", gpus_per_task=4, tasks_per_node=2
@@ -884,7 +891,7 @@ class TestResourceRequirementMethods(unittest.TestCase):
         """Test get_task_resource_requirements returns TB format for very large memory."""
         mock_total_gpus.return_value = 8
         mock_cpus.return_value = 192
-        mock_mem.return_value = 8388608  # 8TB in MB
+        mock_mem.return_value = [MemInfo(mem_total_MB=8388608, mem_total_GB=8192)]
 
         result = self.unified_info.get_task_resource_requirements(
             partition="test_partition", gpus_per_task=8
@@ -901,7 +908,7 @@ class TestResourceRequirementMethods(unittest.TestCase):
         """Test get_task_resource_requirements rounds up CPU cores when fractional."""
         mock_total_gpus.return_value = 8
         mock_cpus.return_value = 191  # Odd number that doesn't divide evenly
-        mock_mem.return_value = 1843200
+        mock_mem.return_value = [MemInfo(mem_total_MB=1843200, mem_total_GB=1800)]
 
         result = self.unified_info.get_task_resource_requirements(
             partition="test_partition", gpus_per_task=1
