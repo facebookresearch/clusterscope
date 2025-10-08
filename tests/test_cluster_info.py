@@ -565,21 +565,25 @@ GPU[3]: AMD Radeon RX 7900 XTX"""
         """Test get_gpu_generation_and_count with both NVIDIA and AMD GPUs."""
         mock_has_nvidia.return_value = True
         mock_has_amd.return_value = True
-        nvidia_return = GPUInfo(
-            gpu_count=2,
-            gpu_gen="A100",
-            vendor="nvidia",
-        )
+        nvidia_return = [
+            GPUInfo(
+                gpu_count=2,
+                gpu_gen="A100",
+                vendor="nvidia",
+            )
+        ]
         mock_nvidia_info.return_value = nvidia_return
-        amd_return = GPUInfo(
-            gpu_count=4,
-            gpu_gen="MI300X",
-            vendor="amd",
-        )
+        amd_return = [
+            GPUInfo(
+                gpu_count=4,
+                gpu_gen="MI300X",
+                vendor="amd",
+            )
+        ]
         mock_amd_info.return_value = amd_return
 
         result = self.local_node_info.get_gpu_generation_and_count()
-        expected = [nvidia_return, amd_return]
+        expected = nvidia_return + amd_return
         self.assertEqual(result, expected)
 
     @patch.object(LocalNodeInfo, "has_nvidia_gpus")
