@@ -62,7 +62,7 @@ class TestResourceShape(unittest.TestCase):
                     cpus_per_task=8,
                     memory=memory_str,
                     tasks_per_node=1,
-                    nodes=1,
+                    nodes=2,
                 )
                 self.assertEqual(parse_memory_to_gb(resource.memory), expected_gb)
 
