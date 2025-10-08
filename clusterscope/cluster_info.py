@@ -952,7 +952,5 @@ class AWSClusterInfo:
             "FI_PROVIDER": "efa",
             "FI_EFA_USE_DEVICE_RDMA": "1",
             "NCCL_DEBUG": "INFO",
-            "NCCL_PROTO": "simple",
-            "NCCL_IB_DISABLE": "1",
-            "NCCL_SOCKET_IFNAME": "ens,eth,en",
+            "NCCL_SOCKET_IFNAME": "eth0",
         }
