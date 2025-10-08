@@ -189,6 +189,12 @@ def task():
     help="Number of tasks per node to request",
 )
 @click.option(
+    "--nodes",
+    type=int,
+    default=1,
+    help="Number nodes to request",
+)
+@click.option(
     "--format",
     "output_format",
     type=click.Choice(["json", "sbatch", "slurm_directives", "slurm_cli", "submitit"]),
@@ -214,6 +220,7 @@ def task():
 )
 def slurm(
     tasks_per_node: int,
+    nodes: int,
     output_format: str,
     partition: str,
     gpus_per_task: Optional[int],
@@ -234,6 +241,7 @@ def slurm(
         cpus_per_task=cpus_per_task,
         gpus_per_task=gpus_per_task,
         tasks_per_node=tasks_per_node,
+        nodes=nodes,
     )
 
     # Route to the correct format method based on CLI option
