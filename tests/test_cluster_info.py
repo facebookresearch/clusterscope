@@ -58,7 +58,9 @@ class TestLinuxInfo(unittest.TestCase):
         return_value="               total        used\nMem:     12345    123\n",
     )
     def test_get_mem_per_node_MB(self, mock_run):
-        self.assertEqual(self.linux_info.get_mem_MB(), 12345)
+        self.assertEqual(
+            self.linux_info.get_mem_MB(), [MemInfo(mem_total_MB=12345, mem_total_GB=12)]
+        )
 
 
 class TestDarwinInfo(unittest.TestCase):
@@ -74,7 +76,10 @@ class TestDarwinInfo(unittest.TestCase):
         return_value="34359738368",
     )
     def test_get_mem_per_node_MB(self, mock_run):
-        self.assertEqual(self.darwin_info.get_mem_MB(), 32768)
+        self.assertEqual(
+            self.darwin_info.get_mem_MB(),
+            [MemInfo(mem_total_MB=32768, mem_total_GB=32)],
+        )
 
 
 class TestSlurmClusterInfo(unittest.TestCase):
