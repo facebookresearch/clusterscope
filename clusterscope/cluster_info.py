@@ -866,9 +866,11 @@ class SlurmClusterInfo:
             logging.debug("Parsing node information...")
             for line in result.stdout.splitlines():
                 gres, partition = line.split(",")
-                if line in all_lines:
+                gres_gpu_gen_and_count = gres.split("(")[0]
+                uniq_gpus = gres_gpu_gen_and_count + partition
+                if uniq_gpus in all_lines:
                     continue
-                all_lines.add(line)
+                all_lines.add(uniq_gpus)
                 partition = partition.strip("* ")
                 gres_parts = gres.split(":")
                 if len(gres_parts) >= 3:
