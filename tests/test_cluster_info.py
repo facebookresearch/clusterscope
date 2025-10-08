@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, patch
 from clusterscope.cluster_info import (
     AWSClusterInfo,
     DarwinInfo,
+    GPUInfo,
     LinuxInfo,
     LocalNodeInfo,
     ResourceShape,
@@ -36,7 +37,7 @@ class TestUnifiedInfo(unittest.TestCase):
         unified_info = UnifiedInfo()
         unified_info.is_slurm_cluster = False
         unified_info.has_nvidia_gpus = False
-        self.assertEqual(unified_info.get_gpu_generation_and_count(), {})
+        self.assertEqual(unified_info.get_gpu_generation_and_count(), [])
 
     def test_partition_passed_to_slurm_cluster_info(self):
         unified_info = UnifiedInfo(partition="test_partition")
@@ -81,11 +82,13 @@ class TestSlurmClusterInfo(unittest.TestCase):
         self.cluster_info_with_partition = SlurmClusterInfo(partition="test_partition")
 
     @patch("subprocess.run")
-    def test_get_cluster_name(self, mock_run):
+    @patch("clusterscope.cache.load")
+    def test_get_cluster_name(self, mock_cache, mock_run):
         # Mock successful cluster name retrieval
         mock_run.return_value = MagicMock(
             stdout="ClusterName=test_cluster\nOther=value", returncode=0
         )
+        mock_cache.return_value = {"SLURM_CLUSTER_NAME": "test_cluster"}
         self.assertEqual(self.cluster_info.get_cluster_name(), "test_cluster")
 
     @patch("subprocess.run")
@@ -224,17 +227,30 @@ class TestSlurmClusterInfo(unittest.TestCase):
     def test_get_gpu_generation_and_count_with_partition(self, mock_run):
         # Mock successful GPU generation and count retrieval with partition
         mock_run.return_value = MagicMock(
-            stdout="gpu:a100:4(S:0-1)\ngpu:v100:2(S:0)\n",
+            stdout="gpu:a100:4(S:0-1), test_partition\ngpu:v100:2(S:0), test_partition\n",
             returncode=0,
         )
 
         result = self.cluster_info_with_partition.get_gpu_generation_and_count()
-        expected = {"a100": 4, "v100": 2}
+        expected = [
+            GPUInfo(
+                gpu_count=4,
+                gpu_gen="a100",
+                vendor="nvidia",
+                partition="test_partition",
+            ),
+            GPUInfo(
+                gpu_count=2,
+                gpu_gen="v100",
+                vendor="nvidia",
+                partition="test_partition",
+            ),
+        ]
         self.assertEqual(result, expected)
 
         # Verify that partition argument was passed to subprocess.run
         mock_run.assert_called_with(
-            ["sinfo", "-o", "%G", "-p", "test_partition"],
+            ["sinfo", "-o", "%G,%P", "-p", "test_partition"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
@@ -259,7 +275,18 @@ class TestSlurmClusterInfo(unittest.TestCase):
     @patch("clusterscope.cluster_info.SlurmClusterInfo.get_gpu_generation_and_count")
     def test_has_gpu_type_true(self, mock_get_gpu_generation_and_count):
         # Set up the mock to return a dictionary with the GPU type we're looking for
-        mock_get_gpu_generation_and_count.return_value = {"A100": 4, "V100": 2}
+        mock_get_gpu_generation_and_count.return_value = [
+            GPUInfo(
+                gpu_count=4,
+                gpu_gen="A100",
+                vendor="nvidia",
+            ),
+            GPUInfo(
+                gpu_count=2,
+                gpu_gen="V100",
+                vendor="nvidia",
+            ),
+        ]
 
         # Create an instance of the class containing the has_gpu_type method
         gpu_manager = SlurmClusterInfo()
@@ -433,21 +460,27 @@ class TestLocalNodeInfo(unittest.TestCase):
     @patch("clusterscope.cluster_info.run_cli")
     def test_get_nvidia_gpu_info_success(self, mock_run_cli):
         """Test successful NVIDIA GPU information retrieval."""
-        mock_run_cli.return_value = (
-            "NVIDIA A100-SXM4-40GB\nNVIDIA A100-SXM4-40GB\nTesla V100-SXM2-16GB"
-        )
+        mock_run_cli.return_value = "NVIDIA A100-SXM4-40GB, 2\nNVIDIA A100-SXM4-40GB, 2\nTesla V100-SXM2-16GB, 1"
 
         result = self.local_node_info.get_nvidia_gpu_info()
-        expected = {"A100": 2, "V100": 1}
+        expected = [
+            GPUInfo(gpu_gen="A100", gpu_count=2, vendor="nvidia"),
+            GPUInfo(gpu_gen="V100", gpu_count=1, vendor="nvidia"),
+        ]
         self.assertEqual(result, expected)
 
     @patch("clusterscope.cluster_info.run_cli")
     def test_get_nvidia_gpu_info_empty_lines(self, mock_run_cli):
         """Test NVIDIA GPU info parsing with empty lines."""
-        mock_run_cli.return_value = "NVIDIA A100-SXM4-40GB\n\n\nTesla V100-SXM2-16GB\n"
+        mock_run_cli.return_value = (
+            "NVIDIA A100-SXM4-40GB, 1\n\n\nTesla V100-SXM2-16GB, 1\n"
+        )
 
         result = self.local_node_info.get_nvidia_gpu_info()
-        expected = {"A100": 1, "V100": 1}
+        expected = [
+            GPUInfo(gpu_gen="A100", gpu_count=1, vendor="nvidia"),
+            GPUInfo(gpu_gen="V100", gpu_count=1, vendor="nvidia"),
+        ]
         self.assertEqual(result, expected)
 
     @patch("clusterscope.cluster_info.run_cli")
@@ -457,7 +490,7 @@ class TestLocalNodeInfo(unittest.TestCase):
 GPU[1]: AMD Instinct MI300X"""
 
         result = self.local_node_info.get_amd_gpu_info()
-        expected = {"MI300X": 2}
+        expected = [GPUInfo(gpu_gen="MI300X", gpu_count=2, vendor="amd")]
         self.assertEqual(result, expected)
 
     @patch("clusterscope.cluster_info.run_cli")
@@ -466,7 +499,7 @@ GPU[1]: AMD Instinct MI300X"""
         mock_run_cli.return_value = "GPU[0]: AMD Instinct MI300A"
 
         result = self.local_node_info.get_amd_gpu_info()
-        expected = {"MI300A": 1}
+        expected = [GPUInfo(gpu_gen="MI300A", gpu_count=1, vendor="amd")]
         self.assertEqual(result, expected)
 
     @patch("clusterscope.cluster_info.run_cli")
@@ -478,8 +511,31 @@ GPU[2]: AMD Instinct MI100
 GPU[3]: AMD Radeon RX 7900 XTX"""
 
         result = self.local_node_info.get_amd_gpu_info()
-        expected = {"MI250X": 1, "MI210": 1, "MI100": 1, "RX7900XTX": 1}
-        self.assertEqual(result, expected)
+
+        expected = [
+            GPUInfo(
+                gpu_count=1,
+                gpu_gen="MI250X",
+                vendor="amd",
+            ),
+            GPUInfo(
+                gpu_count=1,
+                gpu_gen="MI210",
+                vendor="amd",
+            ),
+            GPUInfo(
+                gpu_count=1,
+                gpu_gen="MI100",
+                vendor="amd",
+            ),
+            GPUInfo(
+                gpu_count=1,
+                gpu_gen="RX7900XTX",
+                vendor="amd",
+            ),
+        ]
+        for gpu in expected:
+            self.assertIn(gpu, result)
 
     @patch("clusterscope.cluster_info.run_cli")
     def test_get_amd_gpu_info_generic_fallback(self, mock_run_cli):
@@ -488,7 +544,7 @@ GPU[3]: AMD Radeon RX 7900 XTX"""
 
         result = self.local_node_info.get_amd_gpu_info()
         # Should fall back to extracting "6800" as the model
-        expected = {"6800": 1}
+        expected = [GPUInfo(gpu_gen="6800", gpu_count=1, vendor="amd", partition=None)]
         self.assertEqual(result, expected)
 
     @patch("clusterscope.cluster_info.run_cli")
@@ -497,39 +553,7 @@ GPU[3]: AMD Radeon RX 7900 XTX"""
         mock_run_cli.return_value = "Some other output\nNo GPU information here"
 
         result = self.local_node_info.get_amd_gpu_info()
-        self.assertEqual(result, {})
-
-    @patch.object(LocalNodeInfo, "has_nvidia_gpus")
-    @patch.object(LocalNodeInfo, "has_amd_gpus")
-    @patch.object(LocalNodeInfo, "get_nvidia_gpu_info")
-    @patch.object(LocalNodeInfo, "get_amd_gpu_info")
-    def test_get_gpu_generation_and_count_nvidia_only(
-        self, mock_amd_info, mock_nvidia_info, mock_has_amd, mock_has_nvidia
-    ):
-        """Test get_gpu_generation_and_count with NVIDIA GPUs only."""
-        mock_has_nvidia.return_value = True
-        mock_has_amd.return_value = False
-        mock_nvidia_info.return_value = {"A100": 2, "V100": 1}
-
-        result = self.local_node_info.get_gpu_generation_and_count()
-        expected = {"A100": 2, "V100": 1}
-        self.assertEqual(result, expected)
-
-    @patch.object(LocalNodeInfo, "has_nvidia_gpus")
-    @patch.object(LocalNodeInfo, "has_amd_gpus")
-    @patch.object(LocalNodeInfo, "get_nvidia_gpu_info")
-    @patch.object(LocalNodeInfo, "get_amd_gpu_info")
-    def test_get_gpu_generation_and_count_amd_only(
-        self, mock_amd_info, mock_nvidia_info, mock_has_amd, mock_has_nvidia
-    ):
-        """Test get_gpu_generation_and_count with AMD GPUs only."""
-        mock_has_nvidia.return_value = False
-        mock_has_amd.return_value = True
-        mock_amd_info.return_value = {"MI300X": 4, "MI250X": 2}
-
-        result = self.local_node_info.get_gpu_generation_and_count()
-        expected = {"MI300X": 4, "MI250X": 2}
-        self.assertEqual(result, expected)
+        self.assertEqual(result, [])
 
     @patch.object(LocalNodeInfo, "has_nvidia_gpus")
     @patch.object(LocalNodeInfo, "has_amd_gpus")
@@ -541,11 +565,21 @@ GPU[3]: AMD Radeon RX 7900 XTX"""
         """Test get_gpu_generation_and_count with both NVIDIA and AMD GPUs."""
         mock_has_nvidia.return_value = True
         mock_has_amd.return_value = True
-        mock_nvidia_info.return_value = {"A100": 2}
-        mock_amd_info.return_value = {"MI300X": 4}
+        nvidia_return = GPUInfo(
+            gpu_count=2,
+            gpu_gen="A100",
+            vendor="nvidia",
+        )
+        mock_nvidia_info.return_value = nvidia_return
+        amd_return = GPUInfo(
+            gpu_count=4,
+            gpu_gen="MI300X",
+            vendor="amd",
+        )
+        mock_amd_info.return_value = amd_return
 
         result = self.local_node_info.get_gpu_generation_and_count()
-        expected = {"A100": 2, "MI300X": 4}
+        expected = [nvidia_return, amd_return]
         self.assertEqual(result, expected)
 
     @patch.object(LocalNodeInfo, "has_nvidia_gpus")
@@ -559,7 +593,7 @@ GPU[3]: AMD Radeon RX 7900 XTX"""
         mock_has_amd.return_value = False
 
         result = self.local_node_info.get_gpu_generation_and_count()
-        self.assertEqual(result, {})
+        self.assertEqual(result, [])
         mock_logging.assert_called_with(
             "No GPUs found or unable to retrieve GPU information"
         )
@@ -567,7 +601,18 @@ GPU[3]: AMD Radeon RX 7900 XTX"""
     @patch.object(LocalNodeInfo, "get_gpu_generation_and_count")
     def test_has_gpu_type_true(self, mock_get_gpu_info):
         """Test has_gpu_type returns True for available GPU types."""
-        mock_get_gpu_info.return_value = {"A100": 2, "MI300X": 4}
+        mock_get_gpu_info.return_value = [
+            GPUInfo(
+                gpu_count=2,
+                gpu_gen="A100",
+                vendor="nvidia",
+            ),
+            GPUInfo(
+                gpu_count=4,
+                gpu_gen="MI300X",
+                vendor="amd",
+            ),
+        ]
 
         self.assertTrue(self.local_node_info.has_gpu_type("A100"))
         self.assertTrue(self.local_node_info.has_gpu_type("MI300X"))
@@ -577,7 +622,18 @@ GPU[3]: AMD Radeon RX 7900 XTX"""
     @patch.object(LocalNodeInfo, "get_gpu_generation_and_count")
     def test_has_gpu_type_false(self, mock_get_gpu_info):
         """Test has_gpu_type returns False for unavailable GPU types."""
-        mock_get_gpu_info.return_value = {"A100": 2, "MI300X": 4}
+        mock_get_gpu_info.return_value = [
+            GPUInfo(
+                gpu_count=2,
+                gpu_gen="A100",
+                vendor="nvidia",
+            ),
+            GPUInfo(
+                gpu_count=4,
+                gpu_gen="MI300X",
+                vendor="amd",
+            ),
+        ]
 
         self.assertFalse(self.local_node_info.has_gpu_type("V100"))
         self.assertFalse(self.local_node_info.has_gpu_type("MI250X"))
@@ -596,15 +652,6 @@ class TestUnifiedInfoAMDSupport(unittest.TestCase):
 
     def setUp(self):
         self.unified_info = UnifiedInfo()
-
-    @patch.object(LocalNodeInfo, "get_gpu_vendor")
-    def test_get_gpu_vendor(self, mock_get_gpu_vendor):
-        """Test UnifiedInfo.get_gpu_vendor delegates to LocalNodeInfo."""
-        mock_get_gpu_vendor.return_value = "amd"
-
-        result = self.unified_info.get_gpu_vendor()
-        self.assertEqual(result, "amd")
-        mock_get_gpu_vendor.assert_called_once()
 
     @patch.object(LocalNodeInfo, "has_gpu_type")
     def test_has_gpu_type_local_node(self, mock_has_gpu_type):
@@ -873,7 +920,18 @@ class TestResourceRequirementMethods(unittest.TestCase):
     @patch.object(UnifiedInfo, "get_gpu_generation_and_count")
     def test_get_total_gpus_per_node_with_gpus(self, mock_gpu_info):
         """Test get_total_gpus_per_node with actual GPU detection."""
-        mock_gpu_info.return_value = {"A100": 4, "V100": 4}
+        mock_gpu_info.return_value = [
+            GPUInfo(
+                gpu_count=4,
+                gpu_gen="a100",
+                vendor="nvidia",
+            ),
+            GPUInfo(
+                gpu_count=4,
+                gpu_gen="v100",
+                vendor="nvidia",
+            ),
+        ]
 
         result = self.unified_info.get_total_gpus_per_node()
         self.assertEqual(result, 8)  # 4 + 4 = 8
@@ -881,7 +939,7 @@ class TestResourceRequirementMethods(unittest.TestCase):
     @patch.object(UnifiedInfo, "get_gpu_generation_and_count")
     def test_get_total_gpus_per_node_no_gpus_detected(self, mock_gpu_info):
         """Test get_total_gpus_per_node defaults to 8 when no GPUs detected."""
-        mock_gpu_info.return_value = {}
+        mock_gpu_info.return_value = []
 
         result = self.unified_info.get_total_gpus_per_node()
         self.assertEqual(result, 8)  # Default fallback
@@ -889,7 +947,13 @@ class TestResourceRequirementMethods(unittest.TestCase):
     @patch.object(UnifiedInfo, "get_gpu_generation_and_count")
     def test_get_total_gpus_per_node_single_gpu_type(self, mock_gpu_info):
         """Test get_total_gpus_per_node with single GPU type."""
-        mock_gpu_info.return_value = {"A100": 8}
+        mock_gpu_info.return_value = [
+            GPUInfo(
+                gpu_count=8,
+                gpu_gen="a100",
+                vendor="nvidia",
+            ),
+        ]
 
         result = self.unified_info.get_total_gpus_per_node()
         self.assertEqual(result, 8)
@@ -897,7 +961,23 @@ class TestResourceRequirementMethods(unittest.TestCase):
     @patch.object(UnifiedInfo, "get_gpu_generation_and_count")
     def test_get_total_gpus_per_node_mixed_gpu_types(self, mock_gpu_info):
         """Test get_total_gpus_per_node with mixed GPU types."""
-        mock_gpu_info.return_value = {"A100": 2, "V100": 4, "P100": 2}
+        mock_gpu_info.return_value = [
+            GPUInfo(
+                gpu_count=2,
+                gpu_gen="a100",
+                vendor="nvidia",
+            ),
+            GPUInfo(
+                gpu_count=4,
+                gpu_gen="v100",
+                vendor="nvidia",
+            ),
+            GPUInfo(
+                gpu_count=2,
+                gpu_gen="p100",
+                vendor="nvidia",
+            ),
+        ]
 
         result = self.unified_info.get_total_gpus_per_node()
         self.assertEqual(result, 8)  # 2 + 4 + 2 = 8

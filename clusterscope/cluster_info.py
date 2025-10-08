@@ -481,7 +481,7 @@ class LocalNodeInfo:
         assert 0 < mem <= 10**12, f"Likely invalid memory: {mem}"
         return mem
 
-    def get_nvidia_gpu_info(self, timeout: int = 60) -> GPUInfo:
+    def get_nvidia_gpu_info(self, timeout: int = 60) -> list[GPUInfo]:
         """Get NVIDIA GPU information using nvidia-smi."""
         # Check if NVIDIA GPUs are available
         if not self.has_nvidia_gpus():
@@ -501,42 +501,51 @@ class LocalNodeInfo:
                 timeout=timeout,
             )
 
-            gpu_gen = ""
-            first_line = result.strip().split("\n")[0]
-            gpu_name_upper, count = first_line.split(", ")
-            gpu_name_upper = gpu_name_upper.strip().upper()
-            count_parsed = int(count)
+            gpu_info: Dict[str, int] = defaultdict(int)
+            lines = result.strip().split("\n")
+            all_lines = set()
+            for line in lines:
+                if line in all_lines:
+                    continue
+                all_lines.add(line)
+                if ", " not in line:
+                    continue
+                gpu_gen = ""
+                gpu_name_upper, count = line.split(", ")
+                gpu_name_upper = gpu_name_upper.strip().upper()
+                count_parsed = int(count)
 
-            # Check for known NVIDIA GPU types
-            found_gpu = False
-            for gpu_key, gpu_pattern in NVIDIA_GPU_TYPES.items():
-                if gpu_pattern in gpu_name_upper:
-                    gpu_gen = gpu_key
-                    found_gpu = True
-                    break
-
-            # If no known GPU type was found
-            if not found_gpu:
-                # Generic fallback - try to extract model number
-                words = gpu_name_upper.split()
-                for word in words:
-                    if any(char.isdigit() for char in word) and len(word) > 2:
-                        gpu_gen = word
+                # Check for known NVIDIA GPU types
+                found_gpu = False
+                for gpu_key, gpu_pattern in NVIDIA_GPU_TYPES.items():
+                    if gpu_pattern in gpu_name_upper:
+                        gpu_gen = gpu_key
+                        found_gpu = True
                         break
 
-            # If no GPU generation was found, use the full name
-            if not found_gpu and gpu_gen == "":
-                gpu_gen = gpu_name_upper
+                # If no known GPU type was found
+                if not found_gpu:
+                    # Generic fallback - try to extract model number
+                    words = gpu_name_upper.split()
+                    for word in words:
+                        if any(char.isdigit() for char in word) and len(word) > 2:
+                            gpu_gen = word
+                            break
 
-            return GPUInfo(
-                gpu_gen=gpu_gen,
-                gpu_count=count_parsed,
-                vendor="nvidia",
-            )
+                # If no GPU generation was found, use the full name
+                if not found_gpu and gpu_gen == "":
+                    gpu_gen = gpu_name_upper
+
+                gpu_info[gpu_gen] += count_parsed
+
+            return [
+                GPUInfo(gpu_gen=gpu_gen, gpu_count=count, vendor="nvidia")
+                for gpu_gen, count in gpu_info.items()
+            ]
         except RuntimeError as e:
             raise RuntimeError(f"Failed to get NVIDIA GPU information: {str(e)}")
 
-    def get_amd_gpu_info(self, timeout: int = 60) -> GPUInfo:
+    def get_amd_gpu_info(self, timeout: int = 60) -> list[GPUInfo]:
         """Get AMD GPU information using rocm-smi."""
         # Check if AMD GPUs are available
         if not self.has_amd_gpus():
@@ -555,13 +564,11 @@ class LocalNodeInfo:
             )
 
             gpu_info: Dict[str, int] = defaultdict(int)
-            gpu_count = 0
             for line in result.strip().split("\n"):
                 if "GPU" in line and ":" in line:
                     # Parse lines like "GPU[0]: AMD Instinct MI300X"
                     parts = line.split(":")
                     if len(parts) >= 2:
-                        gpu_count += 1
                         gpu_name = parts[1].strip()
                         # Extract GPU generation from full name
                         # Examples: "AMD Instinct MI300X" -> "MI300X"
@@ -593,11 +600,11 @@ class LocalNodeInfo:
                         if not found_gpu and gpu_gen is None:
                             gpu_gen = gpu_name_upper
 
-            return GPUInfo(
-                gpu_gen=gpu_gen,
-                gpu_count=gpu_count,
-                vendor="amd",
-            )
+                        gpu_info[gpu_gen] += 1
+            return [
+                GPUInfo(gpu_gen=gpu_gen, gpu_count=count, vendor="amd")
+                for gpu_gen, count in gpu_info.items()
+            ]
         except RuntimeError as e:
             raise RuntimeError(f"Failed to get AMD GPU information: {str(e)}")
 
@@ -616,7 +623,7 @@ class LocalNodeInfo:
         if self.has_nvidia_gpus():
             try:
                 nvidia_info = self.get_nvidia_gpu_info(timeout)
-                gpu_info.append(nvidia_info)
+                gpu_info.extend(nvidia_info)
             except RuntimeError as e:
                 logging.warning(f"Failed to get NVIDIA GPU info: {e}")
 
@@ -624,7 +631,7 @@ class LocalNodeInfo:
         if self.has_amd_gpus():
             try:
                 amd_info = self.get_amd_gpu_info(timeout)
-                gpu_info.append(amd_info)
+                gpu_info.extend(amd_info)
             except RuntimeError as e:
                 logging.warning(f"Failed to get AMD GPU info: {e}")
 
@@ -852,18 +859,17 @@ class SlurmClusterInfo:
                 check=True,
             )
 
-            # (partition, gpu_gen, gpu_count)
             results = []
-            all_partitions = set()
+            all_lines = set()
 
             # Parse output
             logging.debug("Parsing node information...")
             for line in result.stdout.splitlines():
                 gres, partition = line.split(",")
-                partition = partition.strip("* ")
-                if partition in all_partitions:
+                if line in all_lines:
                     continue
-                all_partitions.add(partition)
+                all_lines.add(line)
+                partition = partition.strip("* ")
                 gres_parts = gres.split(":")
                 if len(gres_parts) >= 3:
                     gpu_gen = gres_parts[1]
@@ -936,7 +942,7 @@ class SlurmClusterInfo:
             bool: True if the GPU type is available, False otherwise
         """
         gpus = self.get_gpu_generation_and_count()
-        return gpu_type.upper() in [g.gpu_gen for g in gpus]
+        return gpu_type.upper() in [g.gpu_gen.upper() for g in gpus]
 
     def get_max_job_lifetime(self) -> str:
         """Get the maximum job lifetime specified in the Slurm configuration.
