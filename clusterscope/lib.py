@@ -75,10 +75,11 @@ def cpus(partition: Optional[str] = None) -> list[CPUInfo] | CPUInfo:
     if partition is not None:
         validate_partition_exists(partition=partition)
     cpu_info = get_unified_info(partition).get_cpus_per_node()
-    for cpu in cpu_info:
+    cpu_info_list = cpu_info if isinstance(cpu_info, list) else [cpu_info]
+    for cpu in cpu_info_list:
         if partition is not None and partition == cpu.partition:
             return cpu
-    return cpu_info
+    return cpu_info_list
 
 
 def mem(

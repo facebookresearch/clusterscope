@@ -219,7 +219,7 @@ class UnifiedInfo:
             return self.slurm_cluster_info.get_slurm_version()
         return "0"
 
-    def get_cpus_per_node(self) -> list[CPUInfo]:
+    def get_cpus_per_node(self) -> list[CPUInfo] | CPUInfo:
         """Get the number of CPUs for each node in the cluster. Returns 0 if not a Slurm cluster.
 
         Returns:
@@ -313,7 +313,10 @@ class UnifiedInfo:
             raise ValueError("tasks_per_node must be at least 1")
 
         self.partition = partition
-        total_cpus_per_node = self.get_cpus_per_node()[0]
+        cpus_per_node = self.get_cpus_per_node()
+        total_cpus_per_node = (
+            cpus_per_node[0] if isinstance(cpus_per_node, list) else cpus_per_node
+        )
         mem_per_node = self.get_mem_per_node_MB()
         total_ram_per_node = (
             mem_per_node[0] if isinstance(mem_per_node, list) else mem_per_node
@@ -365,7 +368,7 @@ class UnifiedInfo:
 
 
 class DarwinInfo:
-    def get_cpu_count(self, timeout: int = 60) -> list[CPUInfo]:
+    def get_cpu_count(self, timeout: int = 60) -> CPUInfo:
         """Get the number of CPUs on the local node.
 
         Returns:
@@ -376,7 +379,7 @@ class DarwinInfo:
         """
         try:
             result = run_cli(["sysctl", "-n", "hw.ncpu"], text=True, timeout=timeout)
-            return [CPUInfo(cpu_count=int(result.strip()))]
+            return CPUInfo(cpu_count=int(result.strip()))
         except RuntimeError as e:
             raise RuntimeError(f"Failed to get CPU information: {str(e)}")
 
@@ -401,7 +404,7 @@ class DarwinInfo:
 
 
 class LinuxInfo:
-    def get_cpu_count(self, timeout: int = 60) -> list[CPUInfo]:
+    def get_cpu_count(self, timeout: int = 60) -> CPUInfo:
         """Get the number of CPUs on the local node.
 
         Returns:
@@ -412,7 +415,7 @@ class LinuxInfo:
         """
         try:
             result = run_cli(["nproc", "--all"], text=True, timeout=timeout)
-            return [CPUInfo(cpu_count=int(result.strip()))]
+            return CPUInfo(cpu_count=int(result.strip()))
         except RuntimeError as e:
             raise RuntimeError(f"Failed to get CPU information: {str(e)}")
 
@@ -475,7 +478,7 @@ class LocalNodeInfo:
         except (FileNotFoundError, subprocess.CalledProcessError):
             return False
 
-    def get_cpu_count(self, timeout: int = 60) -> list[CPUInfo]:
+    def get_cpu_count(self, timeout: int = 60) -> CPUInfo:
         """Get the number of CPUs on the local node.
 
         Returns:
