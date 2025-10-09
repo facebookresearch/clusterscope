@@ -52,7 +52,7 @@ class TestLinuxInfo(unittest.TestCase):
 
     @patch("clusterscope.cluster_info.run_cli", return_value="1234")
     def test_get_cpu_count(self, mock_run):
-        self.assertEqual(self.linux_info.get_cpu_count(), [CPUInfo(cpu_count=1234)])
+        self.assertEqual(self.linux_info.get_cpu_count(), CPUInfo(cpu_count=1234))
 
     @patch(
         "clusterscope.cluster_info.run_cli",
@@ -70,7 +70,7 @@ class TestDarwinInfo(unittest.TestCase):
 
     @patch("clusterscope.cluster_info.run_cli", return_value="10")
     def test_get_cpu_count(self, mock_run):
-        self.assertEqual(self.darwin_info.get_cpu_count(), [CPUInfo(cpu_count=10)])
+        self.assertEqual(self.darwin_info.get_cpu_count(), CPUInfo(cpu_count=10))
 
     @patch(
         "clusterscope.cluster_info.run_cli",
