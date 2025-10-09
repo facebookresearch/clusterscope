@@ -11,7 +11,10 @@ import click
 from click_option_group import optgroup, RequiredMutuallyExclusiveOptionGroup
 
 from clusterscope.cluster_info import AWSClusterInfo, UnifiedInfo
-from clusterscope.validate import job_gen_task_slurm_validator
+from clusterscope.validate import (
+    job_gen_task_slurm_validator,
+    validate_partition_exists,
+)
 
 
 def format_dict(data: Dict[str, Any]) -> str:
@@ -49,6 +52,8 @@ def version():
 )
 def info(partition: str):
     """Show basic cluster information."""
+    if partition is not None:
+        validate_partition_exists(partition=partition, exit_on_error=True)
     unified_info = UnifiedInfo(partition=partition)
     cluster_name = unified_info.get_cluster_name()
     slurm_version = unified_info.get_slurm_version()
@@ -65,10 +70,16 @@ def info(partition: str):
 )
 def cpus(partition: str):
     """Show CPU counts per node."""
+    if partition is not None:
+        validate_partition_exists(partition=partition, exit_on_error=True)
     unified_info = UnifiedInfo(partition=partition)
-    cpus_per_node = unified_info.get_cpus_per_node()
-    click.echo("CPU counts per node:")
-    click.echo(cpus_per_node)
+    cpu_info = unified_info.get_cpus_per_node()
+    cpu_info_list = cpu_info if isinstance(cpu_info, list) else [cpu_info]
+    click.echo("CPU information:")
+    for cpu in cpu_info_list:
+        if partition is not None and partition != cpu.partition:
+            continue
+        click.echo(f"  partition: {cpu.partition}, cpu_count: {cpu.cpu_count}")
 
 
 @cli.command()
@@ -80,10 +91,18 @@ def cpus(partition: str):
 )
 def mem(partition: str):
     """Show memory information per node."""
+    if partition is not None:
+        validate_partition_exists(partition=partition, exit_on_error=True)
     unified_info = UnifiedInfo(partition=partition)
-    mem_per_node = unified_info.get_mem_per_node_MB()
-    click.echo("Mem per node MB:")
-    click.echo(mem_per_node)
+    mem_info = unified_info.get_mem_per_node_MB()
+    mem_info_list = mem_info if isinstance(mem_info, list) else [mem_info]
+    click.echo("Mem information:")
+    for mem in mem_info_list:
+        if partition is not None and partition != mem.partition:
+            continue
+        click.echo(
+            f"  partition: {mem.partition}, mem_total_MB: {mem.mem_total_MB}, mem_total_GB: {mem.mem_total_GB}"
+        )
 
 
 @cli.command()
@@ -98,37 +117,52 @@ def mem(partition: str):
 @click.option("--vendor", is_flag=True, help="Show GPU vendor information")
 def gpus(partition: str, generations: bool, counts: bool, vendor: bool):
     """Show GPU information."""
+    if partition is not None:
+        validate_partition_exists(partition=partition, exit_on_error=True)
     unified_info = UnifiedInfo(partition=partition)
 
     if vendor:
-        vendor_info = unified_info.get_gpu_vendor()
-        click.echo(f"Primary GPU vendor: {vendor_info}")
+        gpus = unified_info.get_gpu_generation_and_count()
+        all_vendors = set()
+        if gpus:
+            click.echo("GPU Vendors:")
+            for gpu in gpus:
+                if partition is not None and partition != gpu.partition:
+                    continue
+                if gpu.vendor in all_vendors:
+                    continue
+                all_vendors.add(gpu.vendor)
+                click.echo(f"- {gpu.vendor}")
     elif counts:
-        gpu_counts = unified_info.get_gpu_generation_and_count()
-        if gpu_counts:
-            click.echo("GPU counts by type:")
-            for gpu_type, count in sorted(gpu_counts.items()):
-                click.echo(f"  {gpu_type}: {count}")
+        gpus = unified_info.get_gpu_generation_and_count()
+        if gpus:
+            click.echo("GPU Gen, Count, Partition:")
+            for gpu in gpus:
+                if partition is not None and partition != gpu.partition:
+                    continue
+                click.echo(f"- {gpu.gpu_gen}, {gpu.gpu_count}, {gpu.partition}")
         else:
             click.echo("No GPUs found")
     elif generations:
-        gpu_counts = unified_info.get_gpu_generation_and_count()
-        if gpu_counts:
+        gpus = unified_info.get_gpu_generation_and_count()
+        if gpus:
             click.echo("GPU generations available:")
-            for gen in sorted(gpu_counts.keys()):
-                click.echo(f"- {gen}")
+            for gpu in gpus:
+                if partition is not None and partition != gpu.partition:
+                    continue
+                click.echo(f"- {gpu.gpu_gen}, {gpu.partition}")
         else:
             click.echo("No GPUs found")
     else:
-        # Default: show both vendor and detailed info
-        vendor_info = unified_info.get_gpu_vendor()
-        gpu_counts = unified_info.get_gpu_generation_and_count()
-
-        click.echo(f"GPU vendor: {vendor_info}")
-        if gpu_counts:
+        gpus = unified_info.get_gpu_generation_and_count()
+        if gpus:
             click.echo("GPU information:")
-            for gpu_type, count in sorted(gpu_counts.items()):
-                click.echo(f"  {gpu_type}: {count}")
+            for gpu in gpus:
+                if partition is not None and partition != gpu.partition:
+                    continue
+                click.echo(
+                    f"  partition: {gpu.partition}, gpu_gen: {gpu.gpu_gen}, count: {gpu.gpu_count}, vendor: {gpu.vendor}"
+                )
         else:
             click.echo("No GPUs found")
 
@@ -189,9 +223,15 @@ def task():
     help="Number of tasks per node to request",
 )
 @click.option(
+    "--nodes",
+    type=int,
+    default=1,
+    help="Number nodes to request",
+)
+@click.option(
     "--format",
     "output_format",
-    type=click.Choice(["json", "sbatch", "srun", "submitit", "salloc"]),
+    type=click.Choice(["json", "sbatch", "slurm_directives", "slurm_cli", "submitit"]),
     default="json",
     help="Format to output the job requirements in",
 )
@@ -214,6 +254,7 @@ def task():
 )
 def slurm(
     tasks_per_node: int,
+    nodes: int,
     output_format: str,
     partition: str,
     gpus_per_task: Optional[int],
@@ -234,15 +275,16 @@ def slurm(
         cpus_per_task=cpus_per_task,
         gpus_per_task=gpus_per_task,
         tasks_per_node=tasks_per_node,
+        nodes=nodes,
     )
 
     # Route to the correct format method based on CLI option
     format_methods = {
         "json": job_requirements.to_json,
         "sbatch": job_requirements.to_sbatch,
-        "srun": job_requirements.to_srun,
+        "slurm_directives": job_requirements.to_sbatch,
+        "slurm_cli": job_requirements.to_srun,
         "submitit": job_requirements.to_submitit,
-        "salloc": job_requirements.to_salloc,
     }
     click.echo(format_methods[output_format]())
 

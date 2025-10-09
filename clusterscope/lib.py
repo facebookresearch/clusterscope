@@ -3,11 +3,20 @@
 
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
-from typing import Dict, Literal, Optional, Tuple
+from typing import Optional, Tuple
 
-from clusterscope.cluster_info import LocalNodeInfo, UnifiedInfo
+from clusterscope.cluster_info import (
+    CPUInfo,
+    GPUInfo,
+    LocalNodeInfo,
+    MemInfo,
+    UnifiedInfo,
+)
 from clusterscope.job_info import JobInfo
-from clusterscope.validate import job_gen_task_slurm_validator
+from clusterscope.validate import (
+    job_gen_task_slurm_validator,
+    validate_partition_exists,
+)
 
 # Partition-aware unified info instance
 _unified_info: Optional[UnifiedInfo] = None
@@ -57,35 +66,39 @@ def slurm_version(partition: Optional[str] = None) -> Tuple[int, ...]:
     return version
 
 
-def cpus(partition: Optional[str] = None) -> int:
+def cpus(partition: Optional[str] = None) -> list[CPUInfo] | CPUInfo:
     """Get the number of CPUs for each node in the cluster. Returns the number of local cpus if not on a cluster.
 
     Args:
         partition (str, optional): Slurm partition name to filter queries.
     """
-    return get_unified_info(partition).get_cpus_per_node()
+    if partition is not None:
+        validate_partition_exists(partition=partition)
+    cpu_info = get_unified_info(partition).get_cpus_per_node()
+    cpu_info_list = cpu_info if isinstance(cpu_info, list) else [cpu_info]
+    for cpu in cpu_info_list:
+        if partition is not None and partition == cpu.partition:
+            return cpu
+    return cpu_info_list
 
 
 def mem(
-    to_unit: Literal["MB", "GB"] = "GB",
     partition: Optional[str] = None,
-) -> int:
+) -> list[MemInfo] | MemInfo:
     """Get the amount of memory for each node in the cluster. Returns the local memory if not on a cluster.
 
     Args:
         to_unit: Unit to return memory in ("MB" or "GB").
         partition (str, optional): Slurm partition name to filter queries.
     """
-    mem = get_unified_info(partition).get_mem_per_node_MB()
-    if to_unit == "MB":
-        pass
-    elif to_unit == "GB":
-        mem //= 1000
-    else:
-        raise ValueError(
-            f"{to_unit} is not a supported unit. Currently supported units: MB, GB"
-        )
-    return mem
+    if partition is not None:
+        validate_partition_exists(partition=partition)
+    mem_info = get_unified_info(partition).get_mem_per_node_MB()
+    mem_info_list = mem_info if isinstance(mem_info, list) else [mem_info]
+    for mem in mem_info_list:
+        if partition is not None and partition == mem.partition:
+            return mem
+    return mem_info_list
 
 
 def get_tmp_dir():
@@ -93,7 +106,7 @@ def get_tmp_dir():
     return tmp
 
 
-def local_node_gpu_generation_and_count() -> Dict[str, int]:
+def local_node_gpu_generation_and_count() -> list[GPUInfo]:
     """Get the GPU generation and count for the local node."""
     return local_info.get_gpu_generation_and_count()
 
