@@ -236,6 +236,31 @@ class TestSlurmClusterInfo(unittest.TestCase):
         )
 
     @patch("subprocess.run")
+    def test_get_gpu_generation_and_count_duplicated_partitions(self, mock_run):
+        # Mock successful GPU generation and count retrieval with partition
+        mock_run.return_value = MagicMock(
+            stdout="gpu:a100:4(S:0-1), test_partition\ngpu:a100:4, test_partition\ngpu:v100:2(S:0), test_partition\n",
+            returncode=0,
+        )
+
+        result = self.cluster_info_with_partition.get_gpu_generation_and_count()
+        expected = [
+            GPUInfo(
+                gpu_count=4,
+                gpu_gen="a100",
+                vendor="nvidia",
+                partition="test_partition",
+            ),
+            GPUInfo(
+                gpu_count=2,
+                gpu_gen="v100",
+                vendor="nvidia",
+                partition="test_partition",
+            ),
+        ]
+        self.assertEqual(result, expected)
+
+    @patch("subprocess.run")
     def test_get_gpu_generation_and_count_with_partition(self, mock_run):
         # Mock successful GPU generation and count retrieval with partition
         mock_run.return_value = MagicMock(
@@ -1006,6 +1031,7 @@ class TestResourceRequirementMethods(unittest.TestCase):
             cpus_per_task=24,
             memory="225G",
             tasks_per_node=1,
+            nodes=1,
         )
 
         # Test that it's immutable (characteristic of NamedTuple)
