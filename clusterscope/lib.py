@@ -83,10 +83,11 @@ def mem(
     if partition is not None:
         validate_partition_exists(partition=partition)
     mem_info = get_unified_info(partition).get_mem_per_node_MB()
-    for mem in mem_info:
+    mem_info_list = mem_info if isinstance(mem_info, list) else [mem_info]
+    for mem in mem_info_list:
         if partition is not None and partition == mem.partition:
             return mem
-    return mem_info
+    return mem_info_list
 
 
 def get_tmp_dir():
