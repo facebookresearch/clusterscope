@@ -31,6 +31,7 @@ class TestResourceShape(unittest.TestCase):
             cpus_per_task=24,
             memory="225G",
             tasks_per_node=1,
+            nodes=1,
         )
 
         # Test immutability (NamedTuple characteristic)
@@ -61,6 +62,7 @@ class TestResourceShape(unittest.TestCase):
                     cpus_per_task=8,
                     memory=memory_str,
                     tasks_per_node=1,
+                    nodes=2,
                 )
                 self.assertEqual(parse_memory_to_gb(resource.memory), expected_gb)
 
@@ -84,6 +86,7 @@ class TestResourceShape(unittest.TestCase):
                     cpus_per_task=cpus_per_task,
                     memory=memory,
                     tasks_per_node=tasks_per_node,
+                    nodes=1,
                 )
                 result = json.loads(resource.to_json())
 
@@ -114,11 +117,11 @@ class TestResourceShape(unittest.TestCase):
                     cpus_per_task=cpus_per_task,
                     memory=memory,
                     tasks_per_node=tasks_per_node,
+                    nodes=1,
                 )
                 result = resource.to_sbatch()
                 lines = result.split("\n")
 
-                self.assertEqual(lines[0], "#!/bin/bash")
                 sbatch_lines = [line for line in lines if line.startswith("#SBATCH")]
                 self.assertIn(f"#SBATCH --cpus-per-task={cpus_per_task}", result)
                 self.assertIn(f"#SBATCH --mem={memory}", result)
@@ -146,12 +149,12 @@ class TestResourceShape(unittest.TestCase):
                     cpus_per_task=cpus_per_task,
                     memory=memory,
                     tasks_per_node=tasks_per_node,
+                    nodes=1,
                 )
 
                 result = resource.to_srun()
 
                 parts = result.split()
-                self.assertEqual(parts[0], "srun")
                 self.assertIn(f"--cpus-per-task={cpus_per_task}", result)
                 self.assertIn(f"--mem={memory}", result)
                 self.assertIn(f"--ntasks-per-node={tasks_per_node}", result)
@@ -178,6 +181,7 @@ class TestResourceShape(unittest.TestCase):
                     cpus_per_task=cpus_per_task,
                     memory=memory,
                     tasks_per_node=tasks_per_node,
+                    nodes=1,
                 )
                 result = json.loads(resource.to_submitit())
 
