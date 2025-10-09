@@ -5,7 +5,7 @@ import styles from './styles.module.css';
 const FeatureList = [
   {
     title: 'Cluster-Agnostic Design',
-    Svg: require('@site/static/img/undraw_docusaurus_mountain.svg').default,
+    // Svg: require('@site/static/img/undraw_docusaurus_mountain.svg').default,
     description: (
       <>
         Write once, run anywhere. Clusterscope automatically detects cluster
@@ -16,7 +16,7 @@ const FeatureList = [
   },
   {
     title: 'Focus on What Matters',
-    Svg: require('@site/static/img/undraw_docusaurus_tree.svg').default,
+    // Svg: require('@site/static/img/undraw_docusaurus_tree.svg').default,
     description: (
       <>
         Clusterscope lets you focus on your code, and we&apos;ll handle HPC cluster operations. 
@@ -25,7 +25,7 @@ const FeatureList = [
   },
   {
     title: 'Unified Interface',
-    Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
+    // Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
     description: (
       <>
         Access cluster information through both Python API and CLI. Whether you're building automated workflows, debugging production issues, or writing portable job submissions.
@@ -37,9 +37,6 @@ const FeatureList = [
 function Feature({Svg, title, description}) {
   return (
     <div className={clsx('col col--4')}>
-      {/* <div className="text--center">
-        <Svg className={styles.featureSvg} role="img" />
-      </div> */}
       <div className="text--center padding-horiz--md">
         <Heading as="h3">{title}</Heading>
         <p>{description}</p>
