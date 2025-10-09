@@ -60,7 +60,7 @@ class TestLinuxInfo(unittest.TestCase):
     )
     def test_get_mem_per_node_MB(self, mock_run):
         self.assertEqual(
-            self.linux_info.get_mem_MB(), [MemInfo(mem_total_MB=12345, mem_total_GB=12)]
+            self.linux_info.get_mem_MB(), MemInfo(mem_total_MB=12345, mem_total_GB=12)
         )
 
 
@@ -79,7 +79,7 @@ class TestDarwinInfo(unittest.TestCase):
     def test_get_mem_per_node_MB(self, mock_run):
         self.assertEqual(
             self.darwin_info.get_mem_MB(),
-            [MemInfo(mem_total_MB=32768, mem_total_GB=32)],
+            MemInfo(mem_total_MB=32768, mem_total_GB=32),
         )
 
 

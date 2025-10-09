@@ -94,8 +94,9 @@ def mem(partition: str):
         validate_partition_exists(partition=partition, exit_on_error=True)
     unified_info = UnifiedInfo(partition=partition)
     mem_info = unified_info.get_mem_per_node_MB()
+    mem_info_list = mem_info if isinstance(mem_info, list) else [mem_info]
     click.echo("Mem information:")
-    for mem in mem_info:
+    for mem in mem_info_list:
         if partition is not None and partition != mem.partition:
             continue
         click.echo(
