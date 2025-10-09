@@ -1,4 +1,4 @@
-# Cluster Scope
+# Clusterscope
 
 clusterscope is a binary and python library to extract core information from HPC Clusters.
 
@@ -19,10 +19,24 @@ $ python
 
 You can also use it as a CLI:
 
-```bash
+```shell
 $ cscope
-usage: cscope [-h] {info,cpus,gpus,check-gpu,aws} ...
-...
+Usage: cscope [OPTIONS] COMMAND [ARGS]...
+
+  Command-line tool to query Slurm cluster information.
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  aws        Check if running on AWS and show NCCL settings.
+  check-gpu  Check if a specific GPU type exists.
+  cpus       Show CPU counts per node.
+  gpus       Show GPU information.
+  info       Show basic cluster information.
+  job-gen    Generate job requirements for different job types.
+  mem        Show memory information per node.
+  version    Show the version of clusterscope.
 ```
 
 ## Contributing
