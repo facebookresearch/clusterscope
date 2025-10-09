@@ -1,4 +1,4 @@
-name: Release to PyPI
+name: Release to PyPI and GitHub
 
 on:
   push:
@@ -8,6 +8,8 @@ jobs:
   build-and-publish:
     runs-on: ubuntu-latest
     environment: pypi-publish
+    permissions:
+      contents: write
     strategy:
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
@@ -23,7 +25,7 @@ jobs:
         run: |
           python -m pip install . --upgrade build twine
 
-      - name: Install clusterscope
+      - name: Build package
         run: |
           python -m build
 
@@ -32,3 +34,14 @@ jobs:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
         run: twine upload --skip-existing dist/*
+
+      - name: Create GitHub Release
+        if: matrix.python-version == '3.11'
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          files: |
+            dist/*
+          generate_release_notes: true
