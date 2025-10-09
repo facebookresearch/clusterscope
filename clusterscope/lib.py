@@ -3,11 +3,14 @@
 
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
-from typing import Literal, Optional, Tuple
+from typing import Optional, Tuple
 
-from clusterscope.cluster_info import GPUInfo, LocalNodeInfo, UnifiedInfo
+from clusterscope.cluster_info import GPUInfo, LocalNodeInfo, MemInfo, UnifiedInfo
 from clusterscope.job_info import JobInfo
-from clusterscope.validate import job_gen_task_slurm_validator
+from clusterscope.validate import (
+    job_gen_task_slurm_validator,
+    validate_partition_exists,
+)
 
 # Partition-aware unified info instance
 _unified_info: Optional[UnifiedInfo] = None
@@ -63,29 +66,28 @@ def cpus(partition: Optional[str] = None) -> int:
     Args:
         partition (str, optional): Slurm partition name to filter queries.
     """
+    if partition is not None:
+        validate_partition_exists(partition=partition)
     return get_unified_info(partition).get_cpus_per_node()
 
 
 def mem(
-    to_unit: Literal["MB", "GB"] = "GB",
     partition: Optional[str] = None,
-) -> int:
+) -> list[MemInfo] | MemInfo:
     """Get the amount of memory for each node in the cluster. Returns the local memory if not on a cluster.
 
     Args:
         to_unit: Unit to return memory in ("MB" or "GB").
         partition (str, optional): Slurm partition name to filter queries.
     """
-    mem = get_unified_info(partition).get_mem_per_node_MB()
-    if to_unit == "MB":
-        pass
-    elif to_unit == "GB":
-        mem //= 1000
-    else:
-        raise ValueError(
-            f"{to_unit} is not a supported unit. Currently supported units: MB, GB"
-        )
-    return mem
+    if partition is not None:
+        validate_partition_exists(partition=partition)
+    mem_info = get_unified_info(partition).get_mem_per_node_MB()
+    mem_info_list = mem_info if isinstance(mem_info, list) else [mem_info]
+    for mem in mem_info_list:
+        if partition is not None and partition == mem.partition:
+            return mem
+    return mem_info_list
 
 
 def get_tmp_dir():

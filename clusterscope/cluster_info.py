@@ -110,6 +110,14 @@ class GPUInfo(NamedTuple):
     partition: Optional[str] = None
 
 
+class MemInfo(NamedTuple):
+    """Represents memory information for a host."""
+
+    mem_total_MB: int
+    mem_total_GB: int
+    partition: Optional[str] = None
+
+
 # Common NVIDIA GPU types
 NVIDIA_GPU_TYPES = {
     "A100": "A100",
@@ -196,7 +204,7 @@ class UnifiedInfo:
             return self.slurm_cluster_info.get_cpus_per_node()
         return self.local_node_info.get_cpu_count()
 
-    def get_mem_per_node_MB(self) -> int:
+    def get_mem_per_node_MB(self) -> list[MemInfo] | MemInfo:
         """Return the lowest amount of mem configured across all nodes in the cluster. Returns 0 if not a Slurm cluster.
 
         Returns:
@@ -280,12 +288,16 @@ class UnifiedInfo:
         if tasks_per_node < 1:
             raise ValueError("tasks_per_node must be at least 1")
 
+        self.partition = partition
         total_cpus_per_node = self.get_cpus_per_node()
-        total_ram_per_node = self.get_mem_per_node_MB()
+        mem_per_node = self.get_mem_per_node_MB()
+        total_ram_per_node = (
+            mem_per_node[0] if isinstance(mem_per_node, list) else mem_per_node
+        )
 
         # CPU Request
         if cpus_per_task is not None:
-            ram_mb_per_cpu = total_ram_per_node / total_cpus_per_node
+            ram_mb_per_cpu = total_ram_per_node.mem_total_MB / total_cpus_per_node
             total_required_ram_mb = math.floor(
                 ram_mb_per_cpu * cpus_per_task * tasks_per_node
             )
@@ -298,7 +310,7 @@ class UnifiedInfo:
                 cpu_cores_per_gpu * gpus_per_task
             )
 
-            ram_mb_per_gpu = total_ram_per_node / total_gpus_per_node
+            ram_mb_per_gpu = total_ram_per_node.mem_total_MB / total_gpus_per_node
             total_required_ram_mb = math.floor(
                 ram_mb_per_gpu * gpus_per_task * tasks_per_node
             )
@@ -343,7 +355,7 @@ class DarwinInfo:
         except RuntimeError as e:
             raise RuntimeError(f"Failed to get CPU information: {str(e)}")
 
-    def get_mem_MB(self, timeout: int = 60) -> int:
+    def get_mem_MB(self, timeout: int = 60) -> MemInfo:
         """Get the amount of memory on the local node.
 
         Returns:
@@ -354,7 +366,11 @@ class DarwinInfo:
         """
         try:
             result = run_cli(["sysctl", "-n", "hw.memsize"], text=True, timeout=timeout)
-            return int(result.strip()) // 1024 // 1024
+            mem_total_MB = int(result.strip()) // 1024 // 1024
+            return MemInfo(
+                mem_total_MB=mem_total_MB,
+                mem_total_GB=mem_total_MB // 1024,
+            )
         except RuntimeError as e:
             raise RuntimeError(f"Failed to get memory information: {str(e)}")
 
@@ -375,7 +391,7 @@ class LinuxInfo:
         except RuntimeError as e:
             raise RuntimeError(f"Failed to get CPU information: {str(e)}")
 
-    def get_mem_MB(self, timeout: int = 60) -> int:
+    def get_mem_MB(self, timeout: int = 60) -> MemInfo:
         """Get the amount of memory on the local node.
 
         Returns:
@@ -389,7 +405,11 @@ class LinuxInfo:
             for line in result.strip().split("\n"):
                 if "Mem:" in line:
                     parts = line.split()
-                    return int(parts[1])
+                    mem_total_MB = int(parts[1])
+                    return MemInfo(
+                        mem_total_MB=mem_total_MB,
+                        mem_total_GB=mem_total_MB // 1024,
+                    )
             raise RuntimeError("Could not find memory information in free output")
         except RuntimeError as e:
             raise RuntimeError(f"Failed to get memory information: {str(e)}")
@@ -446,7 +466,7 @@ class LocalNodeInfo:
             return DarwinInfo().get_cpu_count(timeout)
         raise RuntimeError(f"Unsupported system: {system}")
 
-    def get_mem_MB(self, timeout: int = 60) -> int:
+    def get_mem_MB(self, timeout: int = 60) -> MemInfo:
         """Get the amount of memory on the local node.
 
         Returns:
@@ -462,7 +482,7 @@ class LocalNodeInfo:
             mem = DarwinInfo().get_mem_MB(timeout)
         else:
             raise RuntimeError(f"Unsupported system: {system}")
-        assert 0 < mem <= 10**12, f"Likely invalid memory: {mem}"
+        assert 0 < mem.mem_total_MB <= 10**12, f"Likely invalid memory: {mem}"
         return mem
 
     def get_nvidia_gpu_info(self, timeout: int = 60) -> list[GPUInfo]:
@@ -728,7 +748,7 @@ class SlurmClusterInfo:
         except (subprocess.SubprocessError, FileNotFoundError) as e:
             raise RuntimeError(f"Failed to get cluster name: {str(e)}")
 
-    def get_mem_per_node_MB(self) -> int:
+    def get_mem_per_node_MB(self) -> list[MemInfo]:
         """Get the lowest memory available per node in the cluster.
 
         Returns:
@@ -738,7 +758,7 @@ class SlurmClusterInfo:
             RuntimeError: If unable to retrieve node information.
         """
         try:
-            cmd = ["sinfo", "-o", "%100m", "--noconvert", "--noheader"]
+            cmd = ["sinfo", "-o", "%100m,%100P", "--noconvert", "--noheader"]
             if self.partition:
                 cmd.extend(["-p", self.partition])
 
@@ -751,9 +771,18 @@ class SlurmClusterInfo:
             )
 
             logging.debug("Parsing node information...")
+            results = []
             for line in result.stdout.splitlines():
-                mem = int(line.strip("+ "))
-                return mem
+                mem, partition = line.split(",")
+                mem_MB = int(mem.strip("+ "))
+                results.append(
+                    MemInfo(
+                        mem_total_MB=mem_MB,
+                        mem_total_GB=mem_MB // 1024,
+                        partition=partition.strip("* "),
+                    )
+                )
+            return results
             raise RuntimeError(f"No mem information found in: {result.stdout}")
         except (subprocess.SubprocessError, FileNotFoundError) as e:
             logging.error(f"Failed to get Slurm memory information: {str(e)}")
