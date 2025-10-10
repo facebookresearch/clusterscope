@@ -100,7 +100,7 @@ def mem(partition: str):
     for mem in mem_info_list:
         if partition is not None and partition != mem.partition:
             continue
-        click.echo(f"{mem.mem_total_MB}, {mem.mem_total_GB}, {cpu.partition}")
+        click.echo(f"{mem.mem_total_MB}, {mem.mem_total_GB}, {mem.partition}")
 
 
 @cli.command()
@@ -158,7 +158,9 @@ def gpus(partition: str, generations: bool, counts: bool, vendor: bool):
             for gpu in gpus:
                 if partition is not None and partition != gpu.partition:
                     continue
-                click.echo(f"{gpu.gpu_gen}, {gpu.gpu_count}, {gpu.vendor}, {gpu.partition}")
+                click.echo(
+                    f"{gpu.gpu_gen}, {gpu.gpu_count}, {gpu.vendor}, {gpu.partition}"
+                )
         else:
             click.echo("No GPUs found")
 
