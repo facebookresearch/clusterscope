@@ -4,13 +4,13 @@ sidebar_position: 6
 
 # cscope job-gen
 
-:::tip My tip
+:::tip
 
 CLI version of [`cscope job-gen` command](../LIB/job-gen-task-slurm)
 
 :::
 
-`cscope job-gen` generates Slurm arguments for [GPU Jobs](#cscope-job-gen-for-GPU-Jobs) and [CPU Jobs](#cscope-job-gen-for-GPU-Jobs). The user pass a number of Resources (GPUs or CPUs) and a Slurm partition and `job-gen` calculates the proportionate amount of CPUs and Memory to allocate given what's available in that partition. It also supports outputs to slurm shapes like sbatch (slurm directives), the slurm CLI, and [submitit](https://github.com/facebookincubator/submitit/). 
+`cscope job-gen` generates Slurm arguments for [GPU Jobs](#cscope-job-gen-for-gpu-jobs) and [CPU Jobs](#cscope-job-gen-for-cpu-jobs). The user pass a number of Resources (GPUs or CPUs) and a Slurm partition and `job-gen` calculates the proportionate amount of CPUs and Memory to allocate given what's available in that partition. It also supports outputs to slurm shapes like sbatch (slurm directives), the slurm CLI, and [submitit](https://github.com/facebookincubator/submitit/). 
 
 Sample command asking for half GPUs (4 out of 8) in a node and slurm_cli formatted output:
 
