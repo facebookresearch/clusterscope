@@ -16,7 +16,11 @@ Clusterscope is a tool that includes a CLI and a python library to extract infor
 pip install clusterscope
 ```
 
-Installing clusterscope gives you a CLI and a python Library:
+Installing clusterscope gives you a CLI and a Python Library.
+
+### CLI
+
+Check out our [CLI Docs](./category/cli---command-line-interface) for more information.
 
 ```shell
 $ cscope
@@ -38,6 +42,10 @@ Commands:
   version    Show the version of clusterscope.
 ```
 
+### Python Library
+
+Check out our [Python Library Docs](./category/python-library) for more information.
+
 ```shell
 $ python
 >>> import clusterscope
@@ -49,7 +57,7 @@ $ python
 
 ### Community
 
-You can ask questions on [Github](https://github.com/facebookresearch/clusterscope/discussions). 
+You can [ask questions](https://github.com/facebookresearch/clusterscope/discussions), [open issues and feature-requests](https://github.com/facebookresearch/clusterscope/issues) in [Github](https://github.com/facebookresearch/clusterscope/). 
 
 ### Citing Clusterscope
 If you use Clusterscope in your research please use the following BibTeX entry:
