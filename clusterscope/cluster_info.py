@@ -93,6 +93,7 @@ class ResourceShape(NamedTuple):
         attrs = [
             "slurm_partition",
             "tasks_per_node",
+            "nodes",
         ]
         if self.gpus_per_task and self.gpus_per_task > 0:
             attrs.append("gpus_per_task")
