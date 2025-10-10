@@ -22,12 +22,12 @@ function HomepageHeader() {
           style={{maxWidth: '50%', minWidth: '250px'}}
         />
         <p className="hero__subtitle">{siteConfig.tagline}</p>
-        <div 
+        <div
           className={styles.buttons}
         >
           <Link
             style={{
-              backgroundColor: 'var(--btn-green-bg)', 
+              backgroundColor: 'var(--btn-green-bg)',
               borderColor: 'var(--btn-green-bg)',
               color: 'var(--btn-green-text)'
             }}
@@ -46,7 +46,7 @@ export default function Home() {
   return (
     <Layout
       title={`${siteConfig.title}`}
-      description="Clusterscope is a CLI and python library to extract information from HPC Clusters.">
+      description="Clusterscope is a CLI and python library to extract information from HPC Clusters and Jobs.">
       <HomepageHeader />
       <main>
         <HomepageFeatures />
