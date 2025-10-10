@@ -6,7 +6,7 @@ sidebar_position: 1
 
 ## Introduction
 
-Clusterscope is a tool that includes a CLI and a python library to extract information from HPC Clusters and Jobs.
+Clusterscope is a CLI and python library to extract information from HPC Clusters and Jobs.
 
 ## Quick Start Guide
 
@@ -57,7 +57,7 @@ $ python
 
 ### Community
 
-You can [ask questions](https://github.com/facebookresearch/clusterscope/discussions), [open issues and feature-requests](https://github.com/facebookresearch/clusterscope/issues) in [Github](https://github.com/facebookresearch/clusterscope/). 
+You can [ask questions](https://github.com/facebookresearch/clusterscope/discussions), [open issues and feature-requests](https://github.com/facebookresearch/clusterscope/issues) in [Github](https://github.com/facebookresearch/clusterscope/).
 
 ### Citing Clusterscope
 If you use Clusterscope in your research please use the following BibTeX entry:

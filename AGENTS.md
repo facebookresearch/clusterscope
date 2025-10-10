@@ -1,6 +1,6 @@
 ## Overview
 
-Clusterscope is a binary and python library to extract core information from HPC Clusters. It queries Slurm cluster information, local node details, AWSClusters, and Job information when running it from inside a Job. It provides unified access to cluster resources, GPU information, CPU counts, memory details, and AWS-specific configurations.
+Clusterscope is a CLI and python library to extract information from HPC Clusters and Jobs. It queries Slurm cluster information, local node details, AWSClusters, and Job information when running it from inside a Job. It provides unified access to cluster resources, GPU information, CPU counts, memory details, and AWS-specific configurations.
 
 ## Instructions
 
