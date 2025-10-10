@@ -20,7 +20,7 @@ Installing clusterscope gives you a CLI and a Python Library.
 
 ### CLI
 
-[CLI Docs](./category/cli---command-line-interface)
+Check out our [CLI Docs](./category/cli---command-line-interface) for more information.
 
 ```shell
 $ cscope
@@ -44,7 +44,7 @@ Commands:
 
 ### Python Library
 
-[Python Library Docs](./category/python-library)
+Check out our [Python Library Docs](./category/python-library) for more information.
 
 ```shell
 $ python
