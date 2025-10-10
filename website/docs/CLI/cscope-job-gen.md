@@ -6,7 +6,7 @@ sidebar_position: 6
 
 :::tip
 
-CLI version of [`cscope job-gen` command](../LIB/job-gen-task-slurm)
+CLI version of [`cscope job-gen` command](../LIB/job-gen-task-slurm.md)
 
 :::
 
