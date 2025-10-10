@@ -12,7 +12,7 @@ build-backend = "setuptools.build_meta"
 name = "clusterscope"
 dynamic = ["version"]
 readme = "README.md"
-description = "clusterscope is a python library to extract core information from HPC Clusters"
+description = "Clusterscope is a CLI and python library to extract information from HPC Clusters and Jobs."
 requires-python = ">=3.10"
 license = {file = "LICENSE"}
 authors = [

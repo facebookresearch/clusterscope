@@ -11,7 +11,7 @@ import {themes as prismThemes} from 'prism-react-renderer';
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'Clusterscope',
-  tagline: 'Clusterscope is a CLI and python library to extract information from HPC Clusters.',
+  tagline: 'Clusterscope is a CLI and python library to extract information from HPC Clusters and Jobs.',
   favicon: 'img/favicon.ico',
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
