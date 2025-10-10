@@ -1,6 +1,8 @@
 # Clusterscope
 
-clusterscope is a binary and python library to extract core information from HPC Clusters.
+Clusterscope is a CLI and python library to extract information from HPC Clusters.
+
+Check out our [Website](https://facebookresearch.github.io/clusterscope/) for Getting Started and Documentation.
 
 ## Install from pypi
 
