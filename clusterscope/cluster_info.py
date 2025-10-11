@@ -139,6 +139,8 @@ NVIDIA_GPU_TYPES = {
     "T4": "T4",
     "H100": "H100",
     "H200": "H200",
+    "VOLTA": "V100",
+    "AMPERE": "A100",
 }
 
 # Common AMD GPU types
