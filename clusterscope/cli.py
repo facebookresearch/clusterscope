@@ -75,11 +75,11 @@ def cpus(partition: str):
     unified_info = UnifiedInfo(partition=partition)
     cpu_info = unified_info.get_cpus_per_node()
     cpu_info_list = cpu_info if isinstance(cpu_info, list) else [cpu_info]
-    click.echo("CPU information:")
+    click.echo("CPU Count, Slurm Partition:")
     for cpu in cpu_info_list:
         if partition is not None and partition != cpu.partition:
             continue
-        click.echo(f"  partition: {cpu.partition}, cpu_count: {cpu.cpu_count}")
+        click.echo(f"{cpu.cpu_count}, {cpu.partition}")
 
 
 @cli.command()
@@ -96,13 +96,11 @@ def mem(partition: str):
     unified_info = UnifiedInfo(partition=partition)
     mem_info = unified_info.get_mem_per_node_MB()
     mem_info_list = mem_info if isinstance(mem_info, list) else [mem_info]
-    click.echo("Mem information:")
+    click.echo("Mem total MB, Mem total GB, Slurm Partition:")
     for mem in mem_info_list:
         if partition is not None and partition != mem.partition:
             continue
-        click.echo(
-            f"  partition: {mem.partition}, mem_total_MB: {mem.mem_total_MB}, mem_total_GB: {mem.mem_total_GB}"
-        )
+        click.echo(f"{mem.mem_total_MB}, {mem.mem_total_GB}, {mem.partition}")
 
 
 @cli.command()
@@ -132,36 +130,36 @@ def gpus(partition: str, generations: bool, counts: bool, vendor: bool):
                 if gpu.vendor in all_vendors:
                     continue
                 all_vendors.add(gpu.vendor)
-                click.echo(f"- {gpu.vendor}")
+                click.echo(f"{gpu.vendor}")
     elif counts:
         gpus = unified_info.get_gpu_generation_and_count()
         if gpus:
-            click.echo("GPU Gen, Count, Partition:")
+            click.echo("GPU Gen, GPU Count, Slurm Partition:")
             for gpu in gpus:
                 if partition is not None and partition != gpu.partition:
                     continue
-                click.echo(f"- {gpu.gpu_gen}, {gpu.gpu_count}, {gpu.partition}")
+                click.echo(f"{gpu.gpu_gen}, {gpu.gpu_count}, {gpu.partition}")
         else:
             click.echo("No GPUs found")
     elif generations:
         gpus = unified_info.get_gpu_generation_and_count()
         if gpus:
-            click.echo("GPU generations available:")
+            click.echo("GPU Gen, Slurm Partition:")
             for gpu in gpus:
                 if partition is not None and partition != gpu.partition:
                     continue
-                click.echo(f"- {gpu.gpu_gen}, {gpu.partition}")
+                click.echo(f"{gpu.gpu_gen}, {gpu.partition}")
         else:
             click.echo("No GPUs found")
     else:
         gpus = unified_info.get_gpu_generation_and_count()
         if gpus:
-            click.echo("GPU information:")
+            click.echo("GPU Gen, GPU Count, GPU Vendor, Slurm Partition:")
             for gpu in gpus:
                 if partition is not None and partition != gpu.partition:
                     continue
                 click.echo(
-                    f"  partition: {gpu.partition}, gpu_gen: {gpu.gpu_gen}, count: {gpu.gpu_count}, vendor: {gpu.vendor}"
+                    f"{gpu.gpu_gen}, {gpu.gpu_count}, {gpu.vendor}, {gpu.partition}"
                 )
         else:
             click.echo("No GPUs found")
