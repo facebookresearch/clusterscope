@@ -24,7 +24,7 @@ Options:
 
 ```shell
 $ cscope gpus
-GPU Gen, GPU Count, GPU Vendor, Slurm Partition
+GPU Gen, GPU Count, GPU Vendor, Slurm Partition:
 h100, 8, nvidia, h100
 h200, 8, nvidia, h200
 ```
@@ -42,7 +42,7 @@ h200, h200
 
 ```shell
 $ cscope gpus --counts
-GPU Gen, GPU Count, Partition:
+GPU Gen, GPU Count, Slurm Partition:
 h100, 8, h100
 h200, 8, h200
 ```
@@ -61,6 +61,6 @@ You can also pass an optional partition arg: `... --partition=<partition-name>`,
 
 ```shell
 $ cscope gpus --partition=h100
-GPU Gen, GPU Count, GPU Vendor, Slurm Partition
+GPU Gen, GPU Count, GPU Vendor, Slurm Partition:
 h100, 8, nvidia, h100
 ```
