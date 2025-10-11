@@ -53,6 +53,22 @@ Facebook has adopted a Code of Conduct that we expect project participants to ad
 
 clusterscope is actively maintained by [Lucca Bertoncini](https://github.com/luccabb), and [Kalyan Saladi](https://github.com/skalyan).
 
+## Contributors
+
+[Lucca Bertoncini](https://github.com/luccabb), [Kalyan Saladi](https://github.com/skalyan), [Nikhil Gupta](https://github.com/gunchu), [Misko Dzamba](https://github.com/misko), <Feel free to contribute and add your name>
+
 ### License
 
 clusterscope is licensed under the [MIT](./LICENSE) license.
+
+## Citing Clusterscope
+
+```
+@Misc{
+  author =       {Lucca Bertoncini, and Kalyan Saladi},
+  title =        {Clusterscope - Tooling for extracting HPC Cluster and Jobs information. },
+  howpublished = {Github},
+  year =         {2025},
+  url =          {https://github.com/facebookresearch/clusterscope}
+}
+```
