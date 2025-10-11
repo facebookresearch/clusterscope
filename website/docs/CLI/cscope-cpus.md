@@ -10,10 +10,8 @@ sidebar_position: 3
 
 ```shell
 $ cscope cpus
-CPU information:
-  partition: cpu, cpu_count: 192
-  partition: h100, cpu_count: 192
-  partition: h200, cpu_count: 192
+CPU Count, Slurm Partition:
+192, h100
 ```
 
 ## Slurm Partition Filter
@@ -22,14 +20,14 @@ You can also pass an optional partition arg: `... --partition=<partition-name>`,
 
 ```shell
 $ cscope cpus --partition=h100
-CPU information:
-  partition: h100, cpu_count: 192
+CPU Count, Slurm Partition:
+192, h100
 ```
 
 ## Local Node
 
 ```shell
-➜ cscope cpus
-CPU information:
-  cpu_count: 16
+$ cscope cpus
+CPU Count, Slurm Partition:
+16, None
 ```

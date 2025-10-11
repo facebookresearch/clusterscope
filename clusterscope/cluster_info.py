@@ -55,6 +55,7 @@ class ResourceShape(NamedTuple):
             f"#SBATCH --mem={self.memory}",
             f"#SBATCH --ntasks-per-node={self.tasks_per_node}",
             f"#SBATCH --partition={self.slurm_partition}",
+            f"#SBATCH --nodes={self.nodes}",
         ]
         if self.gpus_per_task and self.gpus_per_task > 0:
             lines.append(f"#SBATCH --gpus-per-task={self.gpus_per_task}")
@@ -71,6 +72,7 @@ class ResourceShape(NamedTuple):
             f"--mem={self.memory}",
             f"--ntasks-per-node={self.tasks_per_node}",
             f"--partition={self.slurm_partition}",
+            f"--nodes={self.nodes}",
         ]
         if self.gpus_per_task and self.gpus_per_task > 0:
             cmd_parts.append(f"--gpus-per-task={self.gpus_per_task}")
@@ -91,6 +93,7 @@ class ResourceShape(NamedTuple):
         attrs = [
             "slurm_partition",
             "tasks_per_node",
+            "nodes",
         ]
         if self.gpus_per_task and self.gpus_per_task > 0:
             attrs.append("gpus_per_task")
@@ -136,6 +139,8 @@ NVIDIA_GPU_TYPES = {
     "T4": "T4",
     "H100": "H100",
     "H200": "H200",
+    "VOLTA": "V100",
+    "AMPERE": "A100",
 }
 
 # Common AMD GPU types

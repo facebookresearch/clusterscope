@@ -33,9 +33,9 @@ h200, 8, nvidia, h200
 
 ```shell
 $ cscope gpus --generations
-GPU Gen, Partition:
-- h100, h100
-- h200, h200
+GPU Gen, Slurm Partition:
+h100, h100
+h200, h200
 ```
 
 ### Slurm gpu counts
@@ -52,7 +52,7 @@ h200, 8, h200
 ```shell
 $ cscope gpus --vendor
 GPU Vendors:
-- nvidia
+nvidia
 ```
 
 ## Slurm Partition Filter
