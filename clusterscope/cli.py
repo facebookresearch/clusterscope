@@ -134,7 +134,7 @@ def gpus(partition: str, generations: bool, counts: bool, vendor: bool):
     elif counts:
         gpus = unified_info.get_gpu_generation_and_count()
         if gpus:
-            click.echo("GPU Gen, GPU Count, Partition:")
+            click.echo("GPU Gen, GPU Count, Slurm Partition:")
             for gpu in gpus:
                 if partition is not None and partition != gpu.partition:
                     continue
@@ -154,7 +154,7 @@ def gpus(partition: str, generations: bool, counts: bool, vendor: bool):
     else:
         gpus = unified_info.get_gpu_generation_and_count()
         if gpus:
-            click.echo("GPU Gen, GPU Count, GPU Vendor, Slurm Partition")
+            click.echo("GPU Gen, GPU Count, GPU Vendor, Slurm Partition:")
             for gpu in gpus:
                 if partition is not None and partition != gpu.partition:
                     continue
