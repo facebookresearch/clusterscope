@@ -18,7 +18,7 @@ click==8.2.1
     #   moreorless
     #   ufmt
     #   usort
-click-option-group==0.5.8
+click-option-group==0.5.9
     # via clusterscope (pyproject.toml)
 distlib==0.4.0
     # via virtualenv
