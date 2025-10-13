@@ -40,7 +40,7 @@ pre-commit install
 
 ### Requirements
 
-If you update the requirements, make sure to add it [`pyproject.toml`](./pyproject.toml)'s appropriate section for the dependency. Then you can run the below to update the requirements file:
+If you update the requirements, make sure to add it to [`pyproject.toml`](./pyproject.toml)'s appropriate section for the dependency. Then you can run the below to update the requirements file:
 
 ```
 $ make requirements.txt
