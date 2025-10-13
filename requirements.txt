@@ -4,5 +4,5 @@ click==8.2.1
     # via
     #   clusterscope (pyproject.toml)
     #   click-option-group
-click-option-group==0.5.8
+click-option-group==0.5.9
     # via clusterscope (pyproject.toml)
