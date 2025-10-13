@@ -1,10 +1,16 @@
+---
+sidebar_position: 4
+---
+
 # Contributing to clusterscope
+
+We welcome contributions in the form of [questions](https://github.com/facebookresearch/clusterscope/discussions), [issues and feature-requests](https://github.com/facebookresearch/clusterscope/issues), and [pull requests](https://github.com/facebookresearch/clusterscope/pulls) in Github.
 
 ## Development Workflow
 
 ### Environment setup
 
-Running the below from the root of this repository brings [uv](https://docs.astral.sh/uv/), all required development dependencies, and installs clusterscope in editable mode:
+Running the below from the root of the [repository](https://github.com/facebookresearch/clusterscope/) brings [uv](https://docs.astral.sh/uv/), all required development dependencies, and installs clusterscope in editable mode:
 
 ```shell
 make install-dev-requirements
@@ -40,7 +46,7 @@ pre-commit install
 
 ### Requirements
 
-If you update the requirements, make sure to add it to [`pyproject.toml`](./pyproject.toml)'s appropriate section for the dependency. Then you can run the below to update the requirements file:
+If you update the requirements, make sure to add it to [`pyproject.toml`](https://github.com/facebookresearch/clusterscope/blob/main/pyproject.toml)'s appropriate section for the dependency. Then you can run the below to update the requirements file:
 
 ```
 $ make requirements.txt
@@ -64,7 +70,7 @@ We welcome your pull requests.
 In order to accept your pull request, we need you to submit a CLA. You only need
 to do this once to work on any of Facebook's open source projects.
 
-Complete your CLA here: <https://code.facebook.com/cla>
+Complete your CLA [here](https://code.facebook.com/cla)
 
 ## Issues
 We use GitHub issues to track public bugs. Please ensure your description is
@@ -76,4 +82,4 @@ outlined on that page and do not file a public issue.
 
 ## License
 By contributing to clusterscope, you agree that your contributions will be licensed
-under the LICENSE file in the root directory of this source tree.
+under the [LICENSE file in Github](https://github.com/facebookresearch/clusterscope/).
