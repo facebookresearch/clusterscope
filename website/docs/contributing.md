@@ -1,3 +1,7 @@
+---
+sidebar_position: 4
+---
+
 # Contributing to clusterscope
 
 ## Development Workflow
