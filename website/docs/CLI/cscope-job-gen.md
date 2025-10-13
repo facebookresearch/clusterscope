@@ -153,3 +153,38 @@ $ cscope job-gen task slurm --partition=h100 --gpus-per-task=4 --format=json
   "mem_gb": 999
 }
 ```
+
+## Slurm Job Launcher Example
+
+Check out the example below on how to use cscope to launch jobs, observe how the user only specifies GPUs and other requirements like memory and CPU are derived for the user:
+
+```bash
+#!/bin/bash
+SLURM_ACCOUNT=<insert-your-slurm-account>
+PARTITION=<insert-your-slurm-partition>
+NUM_GPUS=2
+QOS=<insert-your-slurm-QOS>
+
+CSCOPE_CMD=(cscope job-gen task slurm --gpus-per-task $NUM_GPUS --partition "$PARTITION" --nodes=1 --format slurm_cli)
+# Read generated line into an array
+if read -r -a GEN_ARGS < <("${CSCOPE_CMD[@]}"); then
+  :
+else
+  echo "Error: cscope command failed." >&2
+  exit 1
+fi
+
+jobid=$(sbatch --parsable \
+  "${GEN_ARGS[@]}" \
+    --job-name=test_cscope_num_gpu_${NUM_GPUS} \
+    --account="$SLURM_ACCOUNT" \
+    --qos=${QOS} \
+    --time=0:10:00 \
+    --output=logs/%x-%A_%a.out \
+    --array=1-8 <<'EOF'
+#!/bin/bash
+echo "Hostname: $(hostname)"
+EOF
+)
+echo "Submitted as $jobid"
+```
