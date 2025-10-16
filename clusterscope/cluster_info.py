@@ -180,7 +180,9 @@ class UnifiedInfo:
         """
         if self.is_slurm_cluster:
             return self.slurm_cluster_info.get_cluster_name()
-        if "GITHUB_ACTIONS" in os.environ:
+        if os.environ.get("MAST_HPC_JOB_NAME", None) is not None:
+            return "mast"
+        if os.environ.get("GITHUB_ACTIONS", None) is not None:
             return "github"
         if platform.system() == "Darwin":
             return "macos"
