@@ -67,7 +67,7 @@ pyflakes==3.4.0
     # via flake8
 pyproject-hooks==1.2.0
     # via build
-pytokens==0.1.10
+pytokens==0.2.0
     # via black
 pyyaml==6.0.3
     # via
