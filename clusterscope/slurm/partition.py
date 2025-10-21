@@ -30,12 +30,21 @@ def get_partition_resources(partition: str) -> dict:
         ],
     )
 
-    stdout = result.strip().split("\n")[0]
-    gres, cpus = stdout.split(",")
+    max_gpus = 0
+    max_cpus = 0
+
+    for line in result.strip().split("\n"):
+        if not line:
+            continue
+        gres, cpus = line.split(",")
+        gpus = parse_gres(gres)
+
+        max_gpus = max(max_gpus, gpus)
+        max_cpus = max(max_cpus, int(cpus))
 
     return {
-        "max_gpus": parse_gres(gres),
-        "max_cpus": int(cpus),
+        "max_gpus": max_gpus,
+        "max_cpus": max_cpus,
     }
 
 
