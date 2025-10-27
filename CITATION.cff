@@ -6,6 +6,5 @@ authors:
   given-names: "Lucca"
 - family-names: "Saladi"
   given-names: "Kalyan"
-version: 2.0.4
 date-released: 2025-06
 url: "https://github.com/facebookresearch/clusterscope/"
