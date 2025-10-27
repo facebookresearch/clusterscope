@@ -70,7 +70,7 @@ class JobInfo:
             except ValueError:
                 raise RuntimeError(f"RANK cannot be parsed. {global_rank=}")
             return global_rank
-        if self.is_slurm_job():
+        if self.is_slurm_srun():
             return int(os.environ["SLURM_PROCID"])
         return 0
 
@@ -83,7 +83,7 @@ class JobInfo:
             except ValueError:
                 raise RuntimeError(f"LOCAL_RANK cannot be parsed. {local_rank=}")
             return local_rank
-        if self.is_slurm_job():
+        if self.is_slurm_srun():
             return int(os.environ["SLURM_LOCALID"])
         return 0
 
