@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Bertoncini"
+  given-names: "Lucca"
+- family-names: "Saladi"
+  given-names: "Kalyan"
+version: 2.0.4
+date-released: 2025-06
+url: "https://github.com/facebookresearch/clusterscope/"
