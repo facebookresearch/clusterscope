@@ -34,12 +34,6 @@ class JobInfo:
         self.is_torchelastic_run = lambda: "TORCHELASTIC_RUN_ID" in os.environ
         self.is_slurm_job = lambda: "SLURM_JOB_ID" in os.environ
         self.is_slurm_srun = lambda: "SLURM_PROCID" in os.environ
-        self.job_id = self.get_job_id()
-        self.job_name = self.get_job_name()
-        self.global_rank = self.get_global_rank()
-        self.local_rank = self.get_local_rank()
-        self.world_size = self.get_world_size()
-        self.is_rank_zero = self.get_is_rank_zero()
 
     @lru_cache(maxsize=1)
     def get_job_id(self) -> int:
