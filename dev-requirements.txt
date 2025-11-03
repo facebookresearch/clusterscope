@@ -89,7 +89,7 @@ typing-extensions==4.15.0
     # via
     #   mypy
     #   ufmt
-ufmt==2.8.0
+ufmt==2.9.0
     # via clusterscope (pyproject.toml)
 usort==1.0.8.post1
     # via
