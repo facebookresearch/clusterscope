@@ -73,7 +73,7 @@ pyyaml==6.0.3
     # via
     #   libcst
     #   pre-commit
-stdlibs==2025.5.10
+stdlibs==2025.10.28
     # via usort
 toml==0.10.2
     # via usort
