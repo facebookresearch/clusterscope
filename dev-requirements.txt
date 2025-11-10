@@ -28,7 +28,7 @@ flake8==7.3.0
     # via clusterscope (pyproject.toml)
 identify==2.6.15
     # via pre-commit
-libcst==1.8.5
+libcst==1.8.6
     # via
     #   ufmt
     #   usort
