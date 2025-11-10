@@ -59,7 +59,7 @@ platformdirs==4.5.0
     # via
     #   black
     #   virtualenv
-pre-commit==4.3.0
+pre-commit==4.4.0
     # via clusterscope (pyproject.toml)
 pycodestyle==2.14.0
     # via flake8
@@ -67,7 +67,7 @@ pyflakes==3.4.0
     # via flake8
 pyproject-hooks==1.2.0
     # via build
-pytokens==0.2.0
+pytokens==0.3.0
     # via black
 pyyaml==6.0.3
     # via
