@@ -2,7 +2,7 @@
 #    uv pip compile pyproject.toml -o dev-requirements.txt --extra dev
 attrs==25.4.0
     # via usort
-black==25.9.0
+black==25.11.0
     # via
     #   clusterscope (pyproject.toml)
     #   ufmt
@@ -59,7 +59,7 @@ platformdirs==4.5.0
     # via
     #   black
     #   virtualenv
-pre-commit==4.4.0
+pre-commit==4.5.0
     # via clusterscope (pyproject.toml)
 pycodestyle==2.14.0
     # via flake8
