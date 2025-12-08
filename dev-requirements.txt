@@ -2,7 +2,7 @@
 #    uv pip compile pyproject.toml -o dev-requirements.txt --extra dev
 attrs==25.4.0
     # via usort
-black==25.11.0
+black==25.12.0
     # via
     #   clusterscope (pyproject.toml)
     #   ufmt
