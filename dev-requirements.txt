@@ -55,7 +55,7 @@ pathspec==0.12.1
     #   black
     #   mypy
     #   trailrunner
-platformdirs==4.5.0
+platformdirs==4.5.1
     # via
     #   black
     #   virtualenv
