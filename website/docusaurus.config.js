@@ -22,7 +22,7 @@ const config = {
         content: '2194BFDED507C079',
       },
     },
-  ]
+  ],
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
   future: {
