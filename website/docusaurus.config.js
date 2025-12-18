@@ -14,16 +14,6 @@ const config = {
   tagline: 'Clusterscope is a CLI and python library to extract information from HPC Clusters and Jobs.',
   favicon: 'img/favicon.ico',
 
-  headTags: [
-    {
-      tagName: 'meta',
-      attributes: {
-        name: 'algolia-site-verification',
-        content: '2194BFDED507C079',
-      },
-    },
-  ],
-
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
   future: {
     v4: true, // Improve compatibility with the upcoming Docusaurus v4
@@ -137,21 +127,6 @@ const config = {
         theme: prismThemes.github,
         darkTheme: prismThemes.dracula,
       },
-      algolia: {
-        // The application ID provided by Algolia
-        appId: '75FHVFAQ3R',
-
-        // Public API key: it is safe to commit it
-        apiKey: '04714ce72300f0bfb7f4d3b3ed1d0191',
-
-        indexName: 'crawler_docusaurus v3',
-
-        // Optional: see doc section below
-        contextualSearch: true,
-
-        // Optional: whether the insights feature is enabled or not on Docsearch (`false` by default)
-        insights: false,
-    },
     }),
 };
 
