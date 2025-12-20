@@ -127,6 +127,11 @@ const config = {
         theme: prismThemes.github,
         darkTheme: prismThemes.dracula,
       },
+      algolia: {
+        appId: 'RY7E71TLTH',
+        apiKey: '31aded3a77abf6e730755ed91dab4063',
+        indexName: 'clusterscope'
+      }
     }),
 };
 
