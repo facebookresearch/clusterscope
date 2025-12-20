@@ -128,20 +128,10 @@ const config = {
         darkTheme: prismThemes.dracula,
       },
       algolia: {
-        // The application ID provided by Algolia
-        appId: '75FHVFAQ3R',
-
-        // Public API key: it is safe to commit it
-        apiKey: '04714ce72300f0bfb7f4d3b3ed1d0191',
-
-        indexName: 'crawler_docusaurus v3',
-
-        // Optional: see doc section below
-        contextualSearch: true,
-
-        // Optional: whether the insights feature is enabled or not on Docsearch (`false` by default)
-        insights: false,
-    },
+        appId: 'RY7E71TLTH',
+        apiKey: '31aded3a77abf6e730755ed91dab4063',
+        indexName: 'clusterscope'
+      }
     }),
 };
 
