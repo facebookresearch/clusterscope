@@ -265,9 +265,11 @@ class UnifiedInfo:
             # Default to 8 if no GPUs detected (common configuration)
             return 8
 
-        # Sum all GPU counts across different types
-        total_gpus = sum([g.gpu_count for g in gpus])
-        return max(total_gpus, 1)  # Ensure at least 1 to avoid division by zero
+        # Use maximum GPU count across node types in the partition.
+        # This handles heterogeneous partitions where some nodes may have
+        # fewer GPUs than others (e.g., due to hardware issues).
+        max_gpus = max(g.gpu_count for g in gpus)
+        return max(max_gpus, 1)  # Ensure at least 1 to avoid division by zero
 
     def get_task_resource_requirements(
         self,
