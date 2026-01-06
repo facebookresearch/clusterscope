@@ -964,7 +964,12 @@ class TestResourceRequirementMethods(unittest.TestCase):
 
     @patch.object(UnifiedInfo, "get_gpu_generation_and_count")
     def test_get_total_gpus_per_node_with_gpus(self, mock_gpu_info):
-        """Test get_total_gpus_per_node with actual GPU detection."""
+        """Test get_total_gpus_per_node with actual GPU detection.
+
+        When a partition has multiple GPU types reported (possibly from different
+        nodes or different configurations), we use the maximum count to ensure
+        proper resource allocation on the best-equipped nodes.
+        """
         mock_gpu_info.return_value = [
             GPUInfo(
                 gpu_count=4,
@@ -979,7 +984,7 @@ class TestResourceRequirementMethods(unittest.TestCase):
         ]
 
         result = self.unified_info.get_total_gpus_per_node()
-        self.assertEqual(result, 8)  # 4 + 4 = 8
+        self.assertEqual(result, 4)  # max(4, 4) = 4
 
     @patch.object(UnifiedInfo, "get_gpu_generation_and_count")
     def test_get_total_gpus_per_node_no_gpus_detected(self, mock_gpu_info):
@@ -1005,7 +1010,12 @@ class TestResourceRequirementMethods(unittest.TestCase):
 
     @patch.object(UnifiedInfo, "get_gpu_generation_and_count")
     def test_get_total_gpus_per_node_mixed_gpu_types(self, mock_gpu_info):
-        """Test get_total_gpus_per_node with mixed GPU types."""
+        """Test get_total_gpus_per_node with mixed GPU types.
+
+        In a partition with multiple GPU configurations (possibly from different
+        nodes), we use the maximum GPU count for resource calculation. This
+        ensures proper allocation when requesting GPUs on the best-equipped nodes.
+        """
         mock_gpu_info.return_value = [
             GPUInfo(
                 gpu_count=2,
@@ -1025,7 +1035,7 @@ class TestResourceRequirementMethods(unittest.TestCase):
         ]
 
         result = self.unified_info.get_total_gpus_per_node()
-        self.assertEqual(result, 8)  # 2 + 4 + 2 = 8
+        self.assertEqual(result, 4)  # max(2, 4, 2) = 4
 
     def test_resource_shape_namedtuple(self):
         """Test ResourceShape NamedTuple structure."""
@@ -1041,6 +1051,50 @@ class TestResourceRequirementMethods(unittest.TestCase):
         # Test that it's immutable (characteristic of NamedTuple)
         with self.assertRaises(AttributeError):
             resource.cpus_per_task = 48
+
+    @patch.object(UnifiedInfo, "get_gpu_generation_and_count")
+    @patch.object(UnifiedInfo, "get_cpus_per_node")
+    @patch.object(UnifiedInfo, "get_mem_per_node_MB")
+    def test_get_task_resource_requirements_heterogeneous_gpu_partition(
+        self, mock_mem, mock_cpus, mock_gpu_info
+    ):
+        """Test get_task_resource_requirements with heterogeneous GPU counts per node.
+
+        This simulates a partition where some nodes have fewer GPUs than others
+        (e.g., 7 GPUs on some nodes, 8 GPUs on others). The calculation should
+        use the maximum GPU count per node, not the sum or minimum.
+
+        Real-world example from sinfo output:
+        gpu:h200:7(S:0-1),192
+        gpu:h200:8(S:0-1),192
+
+        When requesting 8 GPUs, we should get 192 CPUs and ~2TB RAM,
+        not 102 CPUs (which would result from using sum of 15 GPUs).
+        """
+        # Simulate heterogeneous partition: some nodes have 7 GPUs, some have 8
+        mock_gpu_info.return_value = [
+            GPUInfo(gpu_gen="h200", gpu_count=7, vendor="nvidia", partition="h200"),
+            GPUInfo(gpu_gen="h200", gpu_count=8, vendor="nvidia", partition="h200"),
+        ]
+        mock_cpus.return_value = [CPUInfo(cpu_count=192, partition="h200")]
+        mock_mem.return_value = [
+            MemInfo(mem_total_MB=2097152, mem_total_GB=2048, partition="h200")
+        ]
+
+        result = self.unified_info.get_task_resource_requirements(
+            partition="h200", gpus_per_task=8
+        )
+
+        # With 8 GPUs per node max, requesting 8 GPUs should give full node:
+        # - 192 CPUs (all CPUs on the node)
+        # - 2048 GB RAM (all RAM on the node)
+        #
+        # If the bug exists (sum instead of max), we'd get:
+        # - 192 / (7+8) * 8 = 102 CPUs (WRONG!)
+        # - 2097152 / (7+8) * 8 / 1024 = 1066 GB (WRONG!)
+        self.assertEqual(result.cpus_per_task, 192)
+        self.assertEqual(result.memory, "2048G")
+        self.assertEqual(result.gpus_per_task, 8)
 
 
 if __name__ == "__main__":
