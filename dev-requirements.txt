@@ -91,7 +91,7 @@ typing-extensions==4.15.0
     #   ufmt
 ufmt==2.9.0
     # via clusterscope (pyproject.toml)
-usort==1.0.8.post1
+usort==1.1.0
     # via
     #   clusterscope (pyproject.toml)
     #   ufmt
