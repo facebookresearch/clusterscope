@@ -77,7 +77,7 @@ stdlibs==2025.10.28
     # via usort
 toml==0.10.2
     # via usort
-tomlkit==0.13.2
+tomlkit==0.14.0
     # via ufmt
 trailrunner==1.4.0
     # via
