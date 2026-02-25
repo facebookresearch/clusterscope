@@ -103,6 +103,19 @@ def mem(partition: str):
         click.echo(f"{mem.mem_total_MB}, {mem.mem_total_GB}, {mem.partition}")
 
 
+@cli.command(name="gpu-mem")
+def gpu_mem():
+    """Show GPU memory per GPU model on the current node."""
+    unified_info = UnifiedInfo()
+    gpu_mem_info = unified_info.get_gpu_mem_MB()
+    if not gpu_mem_info:
+        click.echo("No GPU memory information found")
+        return
+    click.echo("GPU Gen, GPU Vendor, Mem total MB, Mem total GB:")
+    for gm in gpu_mem_info:
+        click.echo(f"{gm.gpu_gen}, {gm.vendor}, {gm.mem_total_MB}, {gm.mem_total_GB}")
+
+
 @cli.command()
 @click.option(
     "--partition",

@@ -12,6 +12,7 @@ from clusterscope.cluster_info import (
     CPUInfo,
     DarwinInfo,
     GPUInfo,
+    GPUMemInfo,
     LinuxInfo,
     LocalNodeInfo,
     MemInfo,
@@ -988,11 +989,11 @@ class TestResourceRequirementMethods(unittest.TestCase):
 
     @patch.object(UnifiedInfo, "get_gpu_generation_and_count")
     def test_get_total_gpus_per_node_no_gpus_detected(self, mock_gpu_info):
-        """Test get_total_gpus_per_node defaults to 8 when no GPUs detected."""
+        """Test get_total_gpus_per_node returns 0 for CPU-only partitions."""
         mock_gpu_info.return_value = []
 
         result = self.unified_info.get_total_gpus_per_node()
-        self.assertEqual(result, 8)  # Default fallback
+        self.assertEqual(result, 0)  # CPU-only partition
 
     @patch.object(UnifiedInfo, "get_gpu_generation_and_count")
     def test_get_total_gpus_per_node_single_gpu_type(self, mock_gpu_info):
@@ -1095,6 +1096,140 @@ class TestResourceRequirementMethods(unittest.TestCase):
         self.assertEqual(result.cpus_per_task, 192)
         self.assertEqual(result.memory, "2048G")
         self.assertEqual(result.gpus_per_task, 8)
+
+
+class TestGetTotalGpusPerNodeCPUOnly(unittest.TestCase):
+    """Test get_total_gpus_per_node returns 0 for CPU-only partitions."""
+
+    def test_returns_zero_when_no_gpus(self):
+        unified_info = UnifiedInfo()
+        unified_info.is_slurm_cluster = False
+        unified_info.has_nvidia_gpus = False
+        unified_info.has_amd_gpus = False
+        self.assertEqual(unified_info.get_total_gpus_per_node(), 0)
+
+    @patch.object(UnifiedInfo, "get_gpu_generation_and_count")
+    def test_returns_max_gpu_count_when_gpus_present(self, mock_gpu):
+        mock_gpu.return_value = [
+            GPUInfo(gpu_gen="A100", gpu_count=8, vendor="nvidia"),
+        ]
+        unified_info = UnifiedInfo()
+        self.assertEqual(unified_info.get_total_gpus_per_node(), 8)
+
+    @patch.object(UnifiedInfo, "get_gpu_generation_and_count")
+    def test_returns_max_across_heterogeneous_nodes(self, mock_gpu):
+        mock_gpu.return_value = [
+            GPUInfo(gpu_gen="A100", gpu_count=8, vendor="nvidia"),
+            GPUInfo(gpu_gen="A100", gpu_count=4, vendor="nvidia"),
+        ]
+        unified_info = UnifiedInfo()
+        self.assertEqual(unified_info.get_total_gpus_per_node(), 8)
+
+
+class TestGetTaskResourceRequirementsCPUOnly(unittest.TestCase):
+    """Test GPU request on CPU-only partition raises ValueError."""
+
+    @patch.object(UnifiedInfo, "get_gpu_generation_and_count", return_value=[])
+    @patch.object(UnifiedInfo, "get_cpus_per_node")
+    @patch.object(UnifiedInfo, "get_mem_per_node_MB")
+    def test_gpu_request_on_cpu_only_partition_raises(
+        self, mock_mem, mock_cpu, mock_gpu
+    ):
+        mock_cpu.return_value = CPUInfo(cpu_count=64, partition="cpu_partition")
+        mock_mem.return_value = MemInfo(
+            mem_total_MB=512000, mem_total_GB=500, partition="cpu_partition"
+        )
+        unified_info = UnifiedInfo()
+        unified_info.is_slurm_cluster = False
+        with self.assertRaises(ValueError) as ctx:
+            unified_info.get_task_resource_requirements(
+                partition="cpu_partition",
+                gpus_per_task=1,
+            )
+        self.assertIn("no GPUs", str(ctx.exception))
+
+    @patch.object(UnifiedInfo, "get_cpus_per_node")
+    @patch.object(UnifiedInfo, "get_mem_per_node_MB")
+    def test_cpu_request_on_cpu_only_partition_succeeds(self, mock_mem, mock_cpu):
+        mock_cpu.return_value = CPUInfo(cpu_count=64, partition="cpu_partition")
+        mock_mem.return_value = MemInfo(
+            mem_total_MB=512000, mem_total_GB=500, partition="cpu_partition"
+        )
+        unified_info = UnifiedInfo()
+        unified_info.is_slurm_cluster = False
+        result = unified_info.get_task_resource_requirements(
+            partition="cpu_partition",
+            cpus_per_task=16,
+        )
+        self.assertIsInstance(result, ResourceShape)
+        self.assertEqual(result.cpus_per_task, 16)
+        self.assertIsNone(result.gpus_per_task)
+
+
+class TestLocalNodeInfoGPUMem(unittest.TestCase):
+    """Test GPU memory querying methods."""
+
+    def setUp(self):
+        self.local_node_info = LocalNodeInfo()
+
+    @patch.object(LocalNodeInfo, "has_nvidia_gpus", return_value=True)
+    @patch("clusterscope.cluster_info.run_cli")
+    def test_get_nvidia_gpu_mem_MB(self, mock_run_cli, mock_has_nvidia):
+        mock_run_cli.return_value = (
+            "NVIDIA A100-SXM4-40GB, 40960\nNVIDIA A100-SXM4-40GB, 40960"
+        )
+        result = self.local_node_info._get_nvidia_gpu_mem_MB()
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].gpu_gen, "A100")
+        self.assertEqual(result[0].mem_total_MB, 40960)
+        self.assertEqual(result[0].mem_total_GB, 40)
+        self.assertEqual(result[0].vendor, "nvidia")
+
+    @patch.object(LocalNodeInfo, "has_nvidia_gpus", return_value=True)
+    @patch.object(LocalNodeInfo, "has_amd_gpus", return_value=False)
+    @patch.object(LocalNodeInfo, "_get_nvidia_gpu_mem_MB")
+    def test_get_gpu_mem_MB_nvidia_only(
+        self, mock_nvidia_mem, mock_has_amd, mock_has_nvidia
+    ):
+        mock_nvidia_mem.return_value = [
+            GPUMemInfo(
+                mem_total_MB=40960, mem_total_GB=40, vendor="nvidia", gpu_gen="A100"
+            )
+        ]
+        result = self.local_node_info.get_gpu_mem_MB()
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].gpu_gen, "A100")
+
+    @patch.object(LocalNodeInfo, "has_nvidia_gpus", return_value=False)
+    @patch.object(LocalNodeInfo, "has_amd_gpus", return_value=False)
+    def test_get_gpu_mem_MB_no_gpus(self, mock_has_amd, mock_has_nvidia):
+        result = self.local_node_info.get_gpu_mem_MB()
+        self.assertEqual(result, [])
+
+
+class TestUnifiedInfoGPUMem(unittest.TestCase):
+    """Test UnifiedInfo.get_gpu_mem_MB dispatches correctly."""
+
+    @patch.object(LocalNodeInfo, "get_gpu_mem_MB")
+    def test_returns_gpu_mem_when_nvidia_present(self, mock_gpu_mem):
+        mock_gpu_mem.return_value = [
+            GPUMemInfo(
+                mem_total_MB=81920, mem_total_GB=80, vendor="nvidia", gpu_gen="H100"
+            )
+        ]
+        unified_info = UnifiedInfo()
+        unified_info.has_nvidia_gpus = True
+        unified_info.has_amd_gpus = False
+        result = unified_info.get_gpu_mem_MB()
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].gpu_gen, "H100")
+
+    def test_returns_empty_on_cpu_only_node(self):
+        unified_info = UnifiedInfo()
+        unified_info.has_nvidia_gpus = False
+        unified_info.has_amd_gpus = False
+        result = unified_info.get_gpu_mem_MB()
+        self.assertEqual(result, [])
 
 
 if __name__ == "__main__":

@@ -8,6 +8,7 @@ from typing import Optional, Tuple
 from clusterscope.cluster_info import (
     CPUInfo,
     GPUInfo,
+    GPUMemInfo,
     LocalNodeInfo,
     MemInfo,
     UnifiedInfo,
@@ -99,6 +100,18 @@ def mem(
         if partition is not None and partition == mem.partition:
             return mem
     return mem_info_list
+
+
+def gpu_mem() -> list[GPUMemInfo]:
+    """Get GPU memory for each GPU model on the current node.
+
+    Queries the local node via nvidia-smi (NVIDIA) or rocm-smi (AMD).
+    Returns an empty list on CPU-only nodes.
+
+    Returns:
+        list[GPUMemInfo]: GPU memory per GPU model.
+    """
+    return get_unified_info().get_gpu_mem_MB()
 
 
 def get_tmp_dir():
