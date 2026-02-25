@@ -56,7 +56,7 @@ clusterscope is actively maintained by [Lucca Bertoncini](https://github.com/luc
 
 ## Contributors
 
-[Lucca Bertoncini](https://github.com/luccabb), [Kalyan Saladi](https://github.com/skalyan), [Nikhil Gupta](https://github.com/gunchu), [Misko Dzamba](https://github.com/misko), [Gustavo Colombini](https://github.com/gustcol), <Feel free to contribute and add your name>
+[Lucca Bertoncini](https://github.com/luccabb), [Kalyan Saladi](https://github.com/skalyan), [Nikhil Gupta](https://github.com/gunchu), [Misko Dzamba](https://github.com/misko), [Gustavo Lima](https://github.com/gustcol), <Feel free to contribute and add your name>
 
 ### License
 
