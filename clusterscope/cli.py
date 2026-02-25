@@ -191,6 +191,8 @@ def check_gpu(gpu_type: str, partition: str):
 
     GPU_TYPE: GPU type to check for (e.g., A100, MI300X)
     """
+    if partition is not None:
+        validate_partition_exists(partition=partition, exit_on_error=True)
     unified_info = UnifiedInfo(partition=partition)
     has_gpu = unified_info.has_gpu_type(gpu_type)
     if has_gpu:

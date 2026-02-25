@@ -34,6 +34,7 @@ Commands:
   aws        Check if running on AWS and show NCCL settings.
   check-gpu  Check if a specific GPU type exists.
   cpus       Show CPU counts per node.
+  gpu-mem    Show GPU memory per GPU model on the current node.
   gpus       Show GPU information.
   info       Show basic cluster information.
   job-gen    Generate job requirements for different job types.
@@ -55,7 +56,7 @@ clusterscope is actively maintained by [Lucca Bertoncini](https://github.com/luc
 
 ## Contributors
 
-[Lucca Bertoncini](https://github.com/luccabb), [Kalyan Saladi](https://github.com/skalyan), [Nikhil Gupta](https://github.com/gunchu), [Misko Dzamba](https://github.com/misko), <Feel free to contribute and add your name>
+[Lucca Bertoncini](https://github.com/luccabb), [Kalyan Saladi](https://github.com/skalyan), [Nikhil Gupta](https://github.com/gunchu), [Misko Dzamba](https://github.com/misko), [Gustavo Colombini](https://github.com/gustcol), <Feel free to contribute and add your name>
 
 ### License
 

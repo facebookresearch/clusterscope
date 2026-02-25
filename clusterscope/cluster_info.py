@@ -325,7 +325,6 @@ class UnifiedInfo:
         if tasks_per_node < 1:
             raise ValueError("tasks_per_node must be at least 1")
 
-        self.partition = partition
         cpus_per_node = self.get_cpus_per_node()
         total_cpus_per_node = (
             cpus_per_node[0] if isinstance(cpus_per_node, list) else cpus_per_node
@@ -535,17 +534,8 @@ class LocalNodeInfo:
 
     def get_nvidia_gpu_info(self, timeout: int = 60) -> list[GPUInfo]:
         """Get NVIDIA GPU information using nvidia-smi."""
-        # Check if NVIDIA GPUs are available
         if not self.has_nvidia_gpus():
-            try:
-                # Try to run nvidia-smi command
-                result = run_cli(
-                    ["nvidia-smi", "--query-gpu=gpu_name", "--format=csv,noheader"],
-                    text=True,
-                    timeout=timeout,
-                )
-            except RuntimeError:
-                raise RuntimeError("No NVIDIA GPUs found")
+            raise RuntimeError("No NVIDIA GPUs found")
         try:
             result = run_cli(
                 ["nvidia-smi", "--query-gpu=gpu_name,count", "--format=csv,noheader"],
@@ -638,17 +628,8 @@ class LocalNodeInfo:
 
     def get_amd_gpu_info(self, timeout: int = 60) -> list[GPUInfo]:
         """Get AMD GPU information using rocm-smi."""
-        # Check if AMD GPUs are available
         if not self.has_amd_gpus():
-            try:
-                # Try to run rocm-smi command
-                result = run_cli(
-                    ["rocm-smi", "--showproductname"],
-                    text=True,
-                    timeout=timeout,
-                )
-            except RuntimeError:
-                raise RuntimeError("No AMD GPUs found")
+            raise RuntimeError("No AMD GPUs found")
         try:
             result = run_cli(
                 ["rocm-smi", "--showproductname"], text=True, timeout=timeout
@@ -668,6 +649,7 @@ class LocalNodeInfo:
                         gpu_name_upper = gpu_name.upper()
 
                         # Check for known AMD GPU types
+                        gpu_gen = ""
                         found_gpu = False
                         for gpu_key, gpu_pattern in AMD_GPU_TYPES.items():
                             if gpu_pattern in gpu_name_upper:
@@ -688,7 +670,7 @@ class LocalNodeInfo:
                                     found_gpu = True
                                     break
 
-                        if not found_gpu and gpu_gen is None:
+                        if not found_gpu and not gpu_gen:
                             gpu_gen = gpu_name_upper
 
                         gpu_info[gpu_gen] += 1
@@ -700,33 +682,51 @@ class LocalNodeInfo:
             raise RuntimeError(f"Failed to get AMD GPU information: {str(e)}")
 
     def _get_amd_gpu_mem_MB(self, timeout: int = 60) -> list[GPUMemInfo]:
-        """Get AMD GPU memory using rocm-smi."""
+        """Get AMD GPU memory using rocm-smi.
+
+        Queries --showproductname for GPU generation and --showmeminfo for VRAM.
+        """
         try:
-            result = run_cli(
+            # Identify GPU generation from product name
+            name_result = run_cli(
+                ["rocm-smi", "--showproductname"], text=True, timeout=timeout
+            )
+            detected_gen = "AMD"
+            for line in name_result.strip().split("\n"):
+                if "GPU" in line and ":" in line:
+                    parts = line.split(":")
+                    if len(parts) >= 2:
+                        gpu_name_upper = parts[-1].strip().upper()
+                        for gpu_key, gpu_pattern in AMD_GPU_TYPES.items():
+                            if gpu_pattern in gpu_name_upper:
+                                detected_gen = gpu_key
+                                break
+                    if detected_gen != "AMD":
+                        break
+
+            # Get VRAM info
+            vram_result = run_cli(
                 ["rocm-smi", "--showmeminfo", "vram", "--json"],
                 text=True,
                 timeout=timeout,
             )
-            data = json.loads(result)
-            gpu_mem: Dict[str, int] = defaultdict(int)
+            data = json.loads(vram_result)
+            max_mem_mb = 0
             for card_data in data.values():
                 vram_total = card_data.get("VRAM Total Memory (B)", 0)
                 mem_mb = int(vram_total) // (1024 * 1024)
-                gpu_gen = "AMD"
-                for gpu_key, gpu_pattern in AMD_GPU_TYPES.items():
-                    if gpu_pattern in str(card_data):
-                        gpu_gen = gpu_key
-                        break
-                gpu_mem[gpu_gen] = max(gpu_mem[gpu_gen], mem_mb)
+                max_mem_mb = max(max_mem_mb, mem_mb)
+
+            if max_mem_mb == 0:
+                return []
 
             return [
                 GPUMemInfo(
-                    mem_total_MB=mem_mb,
-                    mem_total_GB=mem_mb // 1024,
+                    mem_total_MB=max_mem_mb,
+                    mem_total_GB=max_mem_mb // 1024,
                     vendor="amd",
-                    gpu_gen=gpu_gen,
+                    gpu_gen=detected_gen,
                 )
-                for gpu_gen, mem_mb in gpu_mem.items()
             ]
         except RuntimeError as e:
             raise RuntimeError(f"Failed to get AMD GPU memory: {str(e)}")
@@ -926,8 +926,11 @@ class SlurmClusterInfo:
                         partition=partition.strip("* "),
                     )
                 )
+            if not results:
+                raise RuntimeError(
+                    f"No mem information found in: {result.stdout}"
+                )
             return results
-            raise RuntimeError(f"No mem information found in: {result.stdout}")
         except (subprocess.SubprocessError, FileNotFoundError) as e:
             logging.error(f"Failed to get Slurm memory information: {str(e)}")
             raise RuntimeError(f"Failed to get Slurm memory information: {str(e)}")

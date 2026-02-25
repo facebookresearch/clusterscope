@@ -28,12 +28,18 @@ class TestUnifiedInfo(unittest.TestCase):
     def test_get_cluster_name(self):
         unified_info = UnifiedInfo()
         unified_info.is_slurm_cluster = False
-        self.assertIn(unified_info.get_cluster_name(), ["local-node", "github"])
+        self.assertIn(
+            unified_info.get_cluster_name(),
+            ["local-node", "github", "macos", "mast"],
+        )
 
     def test_get_cluster_name_with_partition(self):
         unified_info = UnifiedInfo(partition="gpu_partition")
         unified_info.is_slurm_cluster = False
-        self.assertIn(unified_info.get_cluster_name(), ["local-node", "github"])
+        self.assertIn(
+            unified_info.get_cluster_name(),
+            ["local-node", "github", "macos", "mast"],
+        )
         self.assertEqual(unified_info.partition, "gpu_partition")
 
     def test_get_gpu_generation_and_count(self):
@@ -499,8 +505,9 @@ class TestLocalNodeInfo(unittest.TestCase):
         mock_run.side_effect = subprocess.CalledProcessError(1, ["rocm-smi"])
         self.assertFalse(self.local_node_info.has_amd_gpus())
 
+    @patch.object(LocalNodeInfo, "has_nvidia_gpus", return_value=True)
     @patch("clusterscope.cluster_info.run_cli")
-    def test_get_nvidia_gpu_info_success(self, mock_run_cli):
+    def test_get_nvidia_gpu_info_success(self, mock_run_cli, mock_has_nvidia):
         """Test successful NVIDIA GPU information retrieval."""
         mock_run_cli.return_value = "NVIDIA A100-SXM4-40GB, 2\nNVIDIA A100-SXM4-40GB, 2\nTesla V100-SXM2-16GB, 1"
 
@@ -511,8 +518,9 @@ class TestLocalNodeInfo(unittest.TestCase):
         ]
         self.assertEqual(result, expected)
 
+    @patch.object(LocalNodeInfo, "has_nvidia_gpus", return_value=True)
     @patch("clusterscope.cluster_info.run_cli")
-    def test_get_nvidia_gpu_info_empty_lines(self, mock_run_cli):
+    def test_get_nvidia_gpu_info_empty_lines(self, mock_run_cli, mock_has_nvidia):
         """Test NVIDIA GPU info parsing with empty lines."""
         mock_run_cli.return_value = (
             "NVIDIA A100-SXM4-40GB, 1\n\n\nTesla V100-SXM2-16GB, 1\n"
@@ -525,8 +533,9 @@ class TestLocalNodeInfo(unittest.TestCase):
         ]
         self.assertEqual(result, expected)
 
+    @patch.object(LocalNodeInfo, "has_amd_gpus", return_value=True)
     @patch("clusterscope.cluster_info.run_cli")
-    def test_get_amd_gpu_info_mi300x(self, mock_run_cli):
+    def test_get_amd_gpu_info_mi300x(self, mock_run_cli, mock_has_amd):
         """Test AMD GPU information retrieval for MI300X."""
         mock_run_cli.return_value = """GPU[0]: AMD Instinct MI300X
 GPU[1]: AMD Instinct MI300X"""
@@ -535,8 +544,9 @@ GPU[1]: AMD Instinct MI300X"""
         expected = [GPUInfo(gpu_gen="MI300X", gpu_count=2, vendor="amd")]
         self.assertEqual(result, expected)
 
+    @patch.object(LocalNodeInfo, "has_amd_gpus", return_value=True)
     @patch("clusterscope.cluster_info.run_cli")
-    def test_get_amd_gpu_info_mi300a(self, mock_run_cli):
+    def test_get_amd_gpu_info_mi300a(self, mock_run_cli, mock_has_amd):
         """Test AMD GPU information retrieval for MI300A."""
         mock_run_cli.return_value = "GPU[0]: AMD Instinct MI300A"
 
@@ -544,8 +554,9 @@ GPU[1]: AMD Instinct MI300X"""
         expected = [GPUInfo(gpu_gen="MI300A", gpu_count=1, vendor="amd")]
         self.assertEqual(result, expected)
 
+    @patch.object(LocalNodeInfo, "has_amd_gpus", return_value=True)
     @patch("clusterscope.cluster_info.run_cli")
-    def test_get_amd_gpu_info_various_models(self, mock_run_cli):
+    def test_get_amd_gpu_info_various_models(self, mock_run_cli, mock_has_amd):
         """Test AMD GPU info parsing with various GPU models."""
         mock_run_cli.return_value = """GPU[0]: AMD Instinct MI250X
 GPU[1]: AMD Instinct MI210
@@ -579,8 +590,9 @@ GPU[3]: AMD Radeon RX 7900 XTX"""
         for gpu in expected:
             self.assertIn(gpu, result)
 
+    @patch.object(LocalNodeInfo, "has_amd_gpus", return_value=True)
     @patch("clusterscope.cluster_info.run_cli")
-    def test_get_amd_gpu_info_generic_fallback(self, mock_run_cli):
+    def test_get_amd_gpu_info_generic_fallback(self, mock_run_cli, mock_has_amd):
         """Test AMD GPU info parsing with generic fallback for unknown models."""
         mock_run_cli.return_value = "GPU[0]: AMD Radeon RX 6800 XT"
 
@@ -589,8 +601,9 @@ GPU[3]: AMD Radeon RX 7900 XTX"""
         expected = [GPUInfo(gpu_gen="6800", gpu_count=1, vendor="amd", partition=None)]
         self.assertEqual(result, expected)
 
+    @patch.object(LocalNodeInfo, "has_amd_gpus", return_value=True)
     @patch("clusterscope.cluster_info.run_cli")
-    def test_get_amd_gpu_info_no_gpu_lines(self, mock_run_cli):
+    def test_get_amd_gpu_info_no_gpu_lines(self, mock_run_cli, mock_has_amd):
         """Test AMD GPU info parsing with no GPU lines."""
         mock_run_cli.return_value = "Some other output\nNo GPU information here"
 
@@ -1199,6 +1212,36 @@ class TestLocalNodeInfoGPUMem(unittest.TestCase):
         result = self.local_node_info.get_gpu_mem_MB()
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0].gpu_gen, "A100")
+
+    @patch.object(LocalNodeInfo, "has_amd_gpus", return_value=True)
+    @patch("clusterscope.cluster_info.run_cli")
+    def test_get_amd_gpu_mem_MB(self, mock_run_cli, mock_has_amd):
+        mock_run_cli.side_effect = [
+            # First call: --showproductname
+            "GPU[0]          : Card model:          AMD Instinct MI300X\n"
+            "GPU[1]          : Card model:          AMD Instinct MI300X\n",
+            # Second call: --showmeminfo vram --json
+            '{"card0": {"VRAM Total Memory (B)": 206158430208}, '
+            '"card1": {"VRAM Total Memory (B)": 206158430208}}',
+        ]
+        result = self.local_node_info._get_amd_gpu_mem_MB()
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].gpu_gen, "MI300X")
+        self.assertEqual(result[0].mem_total_MB, 196608)
+        self.assertEqual(result[0].mem_total_GB, 192)
+        self.assertEqual(result[0].vendor, "amd")
+
+    @patch.object(LocalNodeInfo, "has_amd_gpus", return_value=True)
+    @patch("clusterscope.cluster_info.run_cli")
+    def test_get_amd_gpu_mem_MB_zero_vram_returns_empty(
+        self, mock_run_cli, mock_has_amd
+    ):
+        mock_run_cli.side_effect = [
+            "GPU[0]          : Card model:          Unknown GPU\n",
+            '{"card0": {"VRAM Total Memory (B)": 0}}',
+        ]
+        result = self.local_node_info._get_amd_gpu_mem_MB()
+        self.assertEqual(result, [])
 
     @patch.object(LocalNodeInfo, "has_nvidia_gpus", return_value=False)
     @patch.object(LocalNodeInfo, "has_amd_gpus", return_value=False)
