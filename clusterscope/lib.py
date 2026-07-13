@@ -17,6 +17,7 @@ from clusterscope.validate import (
     job_gen_task_slurm_validator,
     validate_partition_exists,
 )
+from packaging.version import Version
 
 # Partition-aware unified info instance
 _unified_info: Optional[UnifiedInfo] = None
@@ -62,8 +63,14 @@ def slurm_version(partition: Optional[str] = None) -> Tuple[int, ...]:
         partition (str, optional): Slurm partition name to filter queries.
     """
     slurm_version = get_unified_info(partition).get_slurm_version()
-    version = tuple(int(v) for v in slurm_version.split("."))
-    return version
+    # SchedMD pre-release builds append a non-PEP440 "-<n>pre<n>" suffix to the
+    # micro (e.g. "26.05.2-0pre1"). Strip it, then let packaging normalize the
+    # numeric release (including the zero-padded YY.MM minor) into the int tuple
+    # that callers compare against. Fall back to the legacy split for odd forms.
+    try:
+        return Version(slurm_version.split("-", 1)[0]).release
+    except Exception:
+        return tuple(int(v) for v in slurm_version.split("."))
 
 
 def cpus(partition: Optional[str] = None) -> list[CPUInfo] | CPUInfo:
