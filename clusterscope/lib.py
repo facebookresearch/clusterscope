@@ -5,6 +5,8 @@
 # LICENSE file in the root directory of this source tree.
 from typing import Optional, Tuple
 
+from packaging.version import InvalidVersion, Version
+
 from clusterscope.cluster_info import (
     CPUInfo,
     GPUInfo,
@@ -62,8 +64,15 @@ def slurm_version(partition: Optional[str] = None) -> Tuple[int, ...]:
         partition (str, optional): Slurm partition name to filter queries.
     """
     slurm_version = get_unified_info(partition).get_slurm_version()
-    version = tuple(int(v) for v in slurm_version.split("."))
-    return version
+    # SchedMD pre-release builds append a non-PEP440 "-<n>pre<n>" suffix to the
+    # micro (e.g. "26.05.2-0pre1"). Strip it, then let packaging normalize the
+    # numeric release (including the zero-padded YY.MM minor) into the int tuple
+    # that callers compare against. Fall back to the legacy split if packaging
+    # cannot parse it.
+    try:
+        return Version(slurm_version.split("-", 1)[0]).release
+    except InvalidVersion:
+        return tuple(int(v) for v in slurm_version.split("."))
 
 
 def cpus(partition: Optional[str] = None) -> list[CPUInfo] | CPUInfo:
