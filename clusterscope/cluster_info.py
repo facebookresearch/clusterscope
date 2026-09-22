@@ -113,6 +113,16 @@ class GPUInfo(NamedTuple):
     partition: Optional[str] = None
 
 
+class GPUMemInfo(NamedTuple):
+    """Represents GPU memory information for a device."""
+
+    mem_total_MB: int
+    mem_total_GB: int
+    vendor: str
+    gpu_gen: str
+    partition: Optional[str] = None
+
+
 class MemInfo(NamedTuple):
     """Represents memory information for a host."""
 
@@ -228,6 +238,19 @@ class UnifiedInfo:
             return self.slurm_cluster_info.get_mem_per_node_MB()
         return self.local_node_info.get_mem_MB()
 
+    def get_gpu_mem_MB(self) -> list[GPUMemInfo]:
+        """Get GPU memory for each GPU model available on the current node.
+
+        GPU memory is a hardware property not exposed by sinfo, so this always
+        queries the local node via nvidia-smi or rocm-smi.
+
+        Returns:
+            list[GPUMemInfo]: GPU memory information per GPU model.
+        """
+        if self.has_nvidia_gpus or self.has_amd_gpus:
+            return self.local_node_info.get_gpu_mem_MB()
+        return []
+
     def get_gpu_generation_and_count(self) -> list[GPUInfo]:
         """Get the number of GPUs on the slurm cluster node.
 
@@ -258,18 +281,16 @@ class UnifiedInfo:
         """Get the total number of GPUs available per node.
 
         Returns:
-            int: Total number of GPUs per node. Returns 8 as default if no GPUs are detected.
+            int: Total number of GPUs per node. Returns 0 for CPU-only partitions.
         """
         gpus = self.get_gpu_generation_and_count()
         if not gpus:
-            # Default to 8 if no GPUs detected (common configuration)
-            return 8
+            return 0
 
         # Use maximum GPU count across node types in the partition.
         # This handles heterogeneous partitions where some nodes may have
         # fewer GPUs than others (e.g., due to hardware issues).
-        max_gpus = max(g.gpu_count for g in gpus)
-        return max(max_gpus, 1)  # Ensure at least 1 to avoid division by zero
+        return max(g.gpu_count for g in gpus)
 
     def get_task_resource_requirements(
         self,
@@ -304,7 +325,6 @@ class UnifiedInfo:
         if tasks_per_node < 1:
             raise ValueError("tasks_per_node must be at least 1")
 
-        self.partition = partition
         cpus_per_node = self.get_cpus_per_node()
         total_cpus_per_node = (
             cpus_per_node[0] if isinstance(cpus_per_node, list) else cpus_per_node
@@ -325,6 +345,12 @@ class UnifiedInfo:
         # GPU Request
         elif gpus_per_task is not None:
             total_gpus_per_node = self.get_total_gpus_per_node()
+
+            if total_gpus_per_node == 0:
+                raise ValueError(
+                    f"Partition '{partition}' has no GPUs. "
+                    "Use cpus_per_task for CPU-only partitions."
+                )
 
             cpu_cores_per_gpu = total_cpus_per_node.cpu_count / total_gpus_per_node
             total_required_cpu_cores_per_task = math.floor(
@@ -508,17 +534,8 @@ class LocalNodeInfo:
 
     def get_nvidia_gpu_info(self, timeout: int = 60) -> list[GPUInfo]:
         """Get NVIDIA GPU information using nvidia-smi."""
-        # Check if NVIDIA GPUs are available
         if not self.has_nvidia_gpus():
-            try:
-                # Try to run nvidia-smi command
-                result = run_cli(
-                    ["nvidia-smi", "--query-gpu=gpu_name", "--format=csv,noheader"],
-                    text=True,
-                    timeout=timeout,
-                )
-            except RuntimeError:
-                raise RuntimeError("No NVIDIA GPUs found")
+            raise RuntimeError("No NVIDIA GPUs found")
         try:
             result = run_cli(
                 ["nvidia-smi", "--query-gpu=gpu_name,count", "--format=csv,noheader"],
@@ -570,19 +587,49 @@ class LocalNodeInfo:
         except RuntimeError as e:
             raise RuntimeError(f"Failed to get NVIDIA GPU information: {str(e)}")
 
+    def _get_nvidia_gpu_mem_MB(self, timeout: int = 60) -> list[GPUMemInfo]:
+        """Get NVIDIA GPU memory using nvidia-smi."""
+        try:
+            result = run_cli(
+                [
+                    "nvidia-smi",
+                    "--query-gpu=gpu_name,memory.total",
+                    "--format=csv,noheader,nounits",
+                ],
+                text=True,
+                timeout=timeout,
+            )
+
+            gpu_mem: Dict[str, int] = defaultdict(int)
+            for line in result.strip().split("\n"):
+                if not line or ", " not in line:
+                    continue
+                gpu_name, mem_mb_str = line.rsplit(", ", 1)
+                gpu_name_upper = gpu_name.strip().upper()
+                gpu_gen = gpu_name_upper
+                for gpu_key, gpu_pattern in NVIDIA_GPU_TYPES.items():
+                    if gpu_pattern in gpu_name_upper:
+                        gpu_gen = gpu_key
+                        break
+                mem_mb = int(mem_mb_str.strip())
+                gpu_mem[gpu_gen] = max(gpu_mem[gpu_gen], mem_mb)
+
+            return [
+                GPUMemInfo(
+                    mem_total_MB=mem_mb,
+                    mem_total_GB=mem_mb // 1024,
+                    vendor="nvidia",
+                    gpu_gen=gpu_gen,
+                )
+                for gpu_gen, mem_mb in gpu_mem.items()
+            ]
+        except RuntimeError as e:
+            raise RuntimeError(f"Failed to get NVIDIA GPU memory: {str(e)}")
+
     def get_amd_gpu_info(self, timeout: int = 60) -> list[GPUInfo]:
         """Get AMD GPU information using rocm-smi."""
-        # Check if AMD GPUs are available
         if not self.has_amd_gpus():
-            try:
-                # Try to run rocm-smi command
-                result = run_cli(
-                    ["rocm-smi", "--showproductname"],
-                    text=True,
-                    timeout=timeout,
-                )
-            except RuntimeError:
-                raise RuntimeError("No AMD GPUs found")
+            raise RuntimeError("No AMD GPUs found")
         try:
             result = run_cli(
                 ["rocm-smi", "--showproductname"], text=True, timeout=timeout
@@ -602,6 +649,7 @@ class LocalNodeInfo:
                         gpu_name_upper = gpu_name.upper()
 
                         # Check for known AMD GPU types
+                        gpu_gen = ""
                         found_gpu = False
                         for gpu_key, gpu_pattern in AMD_GPU_TYPES.items():
                             if gpu_pattern in gpu_name_upper:
@@ -622,7 +670,7 @@ class LocalNodeInfo:
                                     found_gpu = True
                                     break
 
-                        if not found_gpu and gpu_gen is None:
+                        if not found_gpu and not gpu_gen:
                             gpu_gen = gpu_name_upper
 
                         gpu_info[gpu_gen] += 1
@@ -632,6 +680,56 @@ class LocalNodeInfo:
             ]
         except RuntimeError as e:
             raise RuntimeError(f"Failed to get AMD GPU information: {str(e)}")
+
+    def _get_amd_gpu_mem_MB(self, timeout: int = 60) -> list[GPUMemInfo]:
+        """Get AMD GPU memory using rocm-smi.
+
+        Queries --showproductname for GPU generation and --showmeminfo for VRAM.
+        """
+        try:
+            # Identify GPU generation from product name
+            name_result = run_cli(
+                ["rocm-smi", "--showproductname"], text=True, timeout=timeout
+            )
+            detected_gen = "AMD"
+            for line in name_result.strip().split("\n"):
+                if "GPU" in line and ":" in line:
+                    parts = line.split(":")
+                    if len(parts) >= 2:
+                        gpu_name_upper = parts[-1].strip().upper()
+                        for gpu_key, gpu_pattern in AMD_GPU_TYPES.items():
+                            if gpu_pattern in gpu_name_upper:
+                                detected_gen = gpu_key
+                                break
+                    if detected_gen != "AMD":
+                        break
+
+            # Get VRAM info
+            vram_result = run_cli(
+                ["rocm-smi", "--showmeminfo", "vram", "--json"],
+                text=True,
+                timeout=timeout,
+            )
+            data = json.loads(vram_result)
+            max_mem_mb = 0
+            for card_data in data.values():
+                vram_total = card_data.get("VRAM Total Memory (B)", 0)
+                mem_mb = int(vram_total) // (1024 * 1024)
+                max_mem_mb = max(max_mem_mb, mem_mb)
+
+            if max_mem_mb == 0:
+                return []
+
+            return [
+                GPUMemInfo(
+                    mem_total_MB=max_mem_mb,
+                    mem_total_GB=max_mem_mb // 1024,
+                    vendor="amd",
+                    gpu_gen=detected_gen,
+                )
+            ]
+        except RuntimeError as e:
+            raise RuntimeError(f"Failed to get AMD GPU memory: {str(e)}")
 
     def get_gpu_generation_and_count(self, timeout: int = 60) -> list[GPUInfo]:
         """Get GPU information for all available GPUs on the local node.
@@ -665,6 +763,31 @@ class LocalNodeInfo:
             logging.warning("No GPUs found or unable to retrieve GPU information")
 
         return gpu_info
+
+    def get_gpu_mem_MB(self, timeout: int = 60) -> list[GPUMemInfo]:
+        """Get GPU memory for all available GPUs on the local node.
+
+        Returns:
+            list[GPUMemInfo]: GPU memory information per GPU model.
+        """
+        gpu_mem_info = []
+
+        if self.has_nvidia_gpus():
+            try:
+                gpu_mem_info.extend(self._get_nvidia_gpu_mem_MB(timeout))
+            except RuntimeError as e:
+                logging.warning(f"Failed to get NVIDIA GPU memory: {e}")
+
+        if self.has_amd_gpus():
+            try:
+                gpu_mem_info.extend(self._get_amd_gpu_mem_MB(timeout))
+            except RuntimeError as e:
+                logging.warning(f"Failed to get AMD GPU memory: {e}")
+
+        if not gpu_mem_info:
+            logging.warning("No GPU memory information found")
+
+        return gpu_mem_info
 
     def has_gpu_type(self, gpu_type: str) -> bool:
         """Check if a specific GPU type is available on the local node.
@@ -803,8 +926,11 @@ class SlurmClusterInfo:
                         partition=partition.strip("* "),
                     )
                 )
+            if not results:
+                raise RuntimeError(
+                    f"No mem information found in: {result.stdout}"
+                )
             return results
-            raise RuntimeError(f"No mem information found in: {result.stdout}")
         except (subprocess.SubprocessError, FileNotFoundError) as e:
             logging.error(f"Failed to get Slurm memory information: {str(e)}")
             raise RuntimeError(f"Failed to get Slurm memory information: {str(e)}")
