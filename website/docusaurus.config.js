@@ -29,6 +29,7 @@ const config = {
   // If you aren't using GitHub pages, you don't need these.
   organizationName: 'facebookresearch', // Usually your GitHub org/user name.
   projectName: 'clusterscope', // Usually your repo name.
+  trailingSlash: true,
 
   onBrokenLinks: 'throw',
 
