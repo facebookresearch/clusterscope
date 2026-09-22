@@ -33,7 +33,7 @@ function HomepageHeader() {
             }}
             className="button button--secondary button--lg"
             to="/docs/getting_started">
-            Cluterscope Getting Started
+            Clusterscope Getting Started
           </Link>
         </div>
       </div>
