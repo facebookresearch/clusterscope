@@ -150,7 +150,13 @@ print(master_addr, type(master_addr))
 
 ## set_torch_distributed_env_from_slurm()
 
-Method to set torch distributed vars from Slurm vars. This assign values as below:
+Method to set torch distributed environment variables from Slurm variables.
+
+```python
+job.set_torch_distributed_env_from_slurm(set_cuda_visible_devices=False)
+```
+
+This assigns values as follows:
 
 ```
 Torch Distributed, Slurm Var
@@ -160,6 +166,8 @@ RANK, SLURM_PROCID
 LOCAL_WORLD_SIZE, SLURM_NTASKS_PER_NODE
 LOCAL_RANK, SLURM_LOCALID
 MASTER_ADDR, get_master_addr()
-MASTER_PORT get_master_port()
-CUDA_VISIBLE_DEVICES, SLURM_LOCALID
+MASTER_PORT, get_master_port()
+CUDA_VISIBLE_DEVICES, SLURM_LOCALID (only when set_cuda_visible_devices=True)
 ```
+
+By default, `set_cuda_visible_devices` is `False`. This allows multi-GPU frameworks (such as fairseq2 and PyTorch DistributedDataParallel) to see all node GPUs and bind via `LOCAL_RANK` without duplicate device collision. Pass `set_cuda_visible_devices=True` if you explicitly want each process restricted to its local device index via `CUDA_VISIBLE_DEVICES`.

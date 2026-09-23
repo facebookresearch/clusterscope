@@ -131,7 +131,17 @@ class JobInfo:
             )
         return "127.0.0.1"
 
-    def set_torch_distributed_env_from_slurm(self) -> None:
+    def set_torch_distributed_env_from_slurm(
+        self, set_cuda_visible_devices: bool = False
+    ) -> None:
+        """Set torch distributed environment variables from Slurm environment.
+
+        Args:
+            set_cuda_visible_devices: Whether to set CUDA_VISIBLE_DEVICES to
+                SLURM_LOCALID. Defaults to False so multi-GPU training
+                frameworks (such as fairseq2 and PyTorch DDP) can access all
+                node devices and bind via local rank without device collision.
+        """
         if self.is_slurm_srun():
             os.environ["WORLD_SIZE"] = str(os.environ.get("SLURM_NTASKS"))
             os.environ["RANK"] = str(os.environ.get("SLURM_PROCID"))
@@ -141,4 +151,7 @@ class JobInfo:
             os.environ["LOCAL_RANK"] = str(os.environ.get("SLURM_LOCALID"))
             os.environ["MASTER_ADDR"] = self.get_master_addr()
             os.environ["MASTER_PORT"] = str(self.get_master_port())
-            os.environ["CUDA_VISIBLE_DEVICES"] = str(os.environ.get("SLURM_LOCALID"))
+            if set_cuda_visible_devices:
+                os.environ["CUDA_VISIBLE_DEVICES"] = str(
+                    os.environ.get("SLURM_LOCALID")
+                )
