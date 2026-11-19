@@ -36,7 +36,8 @@ def get_partition_resources(partition: str) -> dict:
     for line in result.strip().split("\n"):
         if not line:
             continue
-        gres, cpus = line.split(",")
+        # GRES can itself be a comma-separated list, so split off the last field.
+        gres, cpus = line.rsplit(",", 1)
         gpus = parse_gres(gres)
 
         max_gpus = max(max_gpus, gpus)
