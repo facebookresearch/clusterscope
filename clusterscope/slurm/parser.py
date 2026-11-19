@@ -15,12 +15,13 @@ def parse_gres(gres_str: str) -> int:
     - 'gpu:a100:2'
     - 'gpu:volta:8(S:0-1)'
     - 'gpu:pascal:2'
+    - 'gpu:nvidia_a100-sxm4-80gb:8(S:0-1)'
     - '(null)'
     """
     if not gres_str or gres_str == "(null)":
         return 0
 
-    match = re.search(r"gpu(?::\w+)?:(\d+)", gres_str)
+    match = re.search(r"gpu(?::[^:,(\s]+)?:(\d+)", gres_str)
     if match:
         return int(match.group(1))
 
